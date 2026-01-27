@@ -4,12 +4,12 @@ import { logger } from "@/utils/logger"
 const log = logger.create('PrintInvoice')
 
 /**
- * Print invoice using Frappe's print format system
- * @param {Object} invoiceData - The invoice document data
- * @param {string} printFormat - The print format name (optional)
- * @param {string} letterhead - The letterhead name (optional)
- * @note Use "POS Next Receipt" format for thermal printer (80mm) or configure via POS Profile
- */
+* Print invoice using Frappe's print format system
+* @param {Object} invoiceData - The invoice document data
+* @param {string} printFormat - The print format name (optional)
+* @param {string} letterhead - The letterhead name (optional)
+* @note Use "POS Next Receipt" format for thermal printer (80mm) or configure via POS Profile
+*/
 export async function printInvoice(
 	invoiceData,
 	printFormat = null,
@@ -57,34 +57,34 @@ export async function printInvoice(
 }
 
 /**
- * Generates and prints a custom POS receipt using a thermal printer layout.
- *
- * This fallback printer is used when Frappe's standard print format is unavailable.
- * The receipt is optimized for 80mm thermal printers with clean, readable formatting.
- *
- * Receipt Structure:
- * - Header: Company name and invoice type
- * - Info: Invoice number, date, customer, payment status
- * - Items: Each item shows quantity × original price = subtotal
- * - Discounts: Displayed as separate line items with negative amounts
- * - Totals: Subtotal, tax, and grand total
- * - Payments: Payment methods and amounts, change, outstanding balance
- * - Footer: Thank you message and branding
- *
- * @param {Object} invoiceData - The invoice document data from ERPNext
- * @param {string} invoiceData.name - Invoice number
- * @param {string} invoiceData.company - Company name
- * @param {Array} invoiceData.items - Invoice line items
- * @param {Array} invoiceData.payments - Payment records
- * @param {number} invoiceData.grand_total - Invoice total amount
- */
+* Generates and prints a custom POS receipt using a thermal printer layout.
+*
+* This fallback printer is used when Frappe's standard print format is unavailable.
+* The receipt is optimized for 80mm thermal printers with clean, readable formatting.
+*
+* Receipt Structure:
+* - Header: Company name and invoice type
+* - Info: Invoice number, date, customer, payment status
+* - Items: Each item shows quantity × original price = subtotal
+* - Discounts: Displayed as separate line items with negative amounts
+* - Totals: Subtotal, tax, and grand total
+* - Payments: Payment methods and amounts, change, outstanding balance
+* - Footer: Thank you message and branding
+*
+* @param {Object} invoiceData - The invoice document data from ERPNext
+* @param {string} invoiceData.name - Invoice number
+* @param {string} invoiceData.company - Company name
+* @param {Array} invoiceData.items - Invoice line items
+* @param {Array} invoiceData.payments - Payment records
+* @param {number} invoiceData.grand_total - Invoice total amount
+*/
 export function printInvoiceCustom(invoiceData) {
 	// Open print window with receipt size dimensions (80mm ≈ 302px at 96 DPI)
 	const printWindow = window.open("", "_blank", "width=350,height=600")
 
 	const printContent = `
-		<!DOCTYPE html>
-		<html>
+<!DOCTYPE html>
+<html>
 		<head>
 			<meta charset="UTF-8">
 			<title>${__('Invoice - {0}', [invoiceData.name])}</title>
@@ -289,47 +289,45 @@ export function printInvoiceCustom(invoiceData) {
 						<span>${__('Date:')}</span>
 						<span>${new Date(invoiceData.posting_date || Date.now()).toLocaleString()}</span>
 					</div>
-					${
-						invoiceData.customer_name
-							? `
+					${invoiceData.customer_name
+			? `
 					<div>
 						<span>${__('Customer:')}</span>
 						<span>${invoiceData.customer_name}</span>
 					</div>
 					`
-							: ""
-					}
-					${
-						(invoiceData.status === "Partly Paid" || (invoiceData.outstanding_amount && invoiceData.outstanding_amount > 0 && invoiceData.outstanding_amount < invoiceData.grand_total))
-							? `
+			: ""
+		}
+					${(invoiceData.status === "Partly Paid" || (invoiceData.outstanding_amount && invoiceData.outstanding_amount > 0 && invoiceData.outstanding_amount < invoiceData.grand_total))
+			? `
 					<div class="partial-status">
 						<span>${__('Status:')}</span>
 						<span>${__('PARTIAL PAYMENT')}</span>
 					</div>
 					`
-							: ""
-					}
+			: ""
+		}
 				</div>
 
 				<!-- Items -->
 				<div class="items-table">
 					${invoiceData.items
-						.map((item) => {
-							// Determine if item has promotional pricing
-							const hasItemDiscount =
-								(item.discount_percentage &&
-									Number.parseFloat(item.discount_percentage) > 0) ||
-								(item.discount_amount &&
-									Number.parseFloat(item.discount_amount) > 0)
-							const isFree = item.is_free_item
-							const qty = item.quantity || item.qty
+			.map((item) => {
+				// Determine if item has promotional pricing
+				const hasItemDiscount =
+					(item.discount_percentage &&
+						Number.parseFloat(item.discount_percentage) > 0) ||
+					(item.discount_amount &&
+						Number.parseFloat(item.discount_amount) > 0)
+				const isFree = item.is_free_item
+				const qty = item.quantity || item.qty
 
-							// Display original list price for transparency
-							const displayRate = item.price_list_rate || item.rate
-							// Calculate subtotal before any price reductions
-							const subtotal = qty * displayRate
+				// Display original list price for transparency
+				const displayRate = item.price_list_rate || item.rate
+				// Calculate subtotal before any price reductions
+				const subtotal = qty * displayRate
 
-							return `
+				return `
 						<div class="item-row">
 							<div class="item-name">
 								${item.item_name || item.item_code} ${isFree ? __('(FREE)') : ""}
@@ -338,38 +336,35 @@ export function printInvoiceCustom(invoiceData) {
 								<span>${qty} × ${formatCurrency(displayRate)}</span>
 								<span><strong>${formatCurrency(subtotal)}</strong></span>
 							</div>
-							${
-								hasItemDiscount
-									? `
+							${hasItemDiscount
+						? `
 							<div class="item-discount">
 								<span>Discount ${item.discount_percentage ? `(${Number(item.discount_percentage).toFixed(2)}%)` : ""}</span>
 								<span>-${formatCurrency(item.discount_amount || 0)}</span>
 							</div>
 							`
-									: ""
-							}
-							${
-								item.serial_no
-									? `
+						: ""
+					}
+							${item.serial_no
+						? `
 							<div class="item-serials">
 								<div class="item-serials-label">${__('Serial No:')}</div>
 								<div class="item-serials-list">${item.serial_no.replace(/\n/g, ', ')}</div>
 							</div>
 							`
-									: ""
-							}
+						: ""
+					}
 						</div>
 						`
-						})
-						.join("")}
+			})
+			.join("")}
 				</div>
 
 				<!-- Totals -->
 				<div class="totals">
-					${
-						invoiceData.total_taxes_and_charges &&
-						invoiceData.total_taxes_and_charges > 0
-							? `
+					${invoiceData.total_taxes_and_charges &&
+			invoiceData.total_taxes_and_charges > 0
+			? `
 					<div class="total-row">
 						<span>${__('Subtotal:')}</span>
 						<span>${formatCurrency((invoiceData.grand_total || 0) - (invoiceData.total_taxes_and_charges || 0))}</span>
@@ -379,18 +374,17 @@ export function printInvoiceCustom(invoiceData) {
 						<span>${formatCurrency(invoiceData.total_taxes_and_charges)}</span>
 					</div>
 					`
-							: ""
-					}
-					${
-						invoiceData.discount_amount
-							? `
+			: ""
+		}
+					${invoiceData.discount_amount
+			? `
 					<div class="total-row" style="color: #28a745;">
 						<span>Additional Discount${invoiceData.additional_discount_percentage ? ` (${Number(invoiceData.additional_discount_percentage).toFixed(1)}%)` : ""}:</span>
 						<span>-${formatCurrency(Math.abs(invoiceData.discount_amount))}</span>
 					</div>
 					`
-							: ""
-					}
+			: ""
+		}
 					<div class="total-row grand-total">
 						<span>${__('TOTAL:')}</span>
 						<span>${formatCurrency(invoiceData.grand_total)}</span>
@@ -398,49 +392,46 @@ export function printInvoiceCustom(invoiceData) {
 				</div>
 
 				<!-- Payments -->
-				${
-					invoiceData.payments && invoiceData.payments.length > 0
-						? `
+				${invoiceData.payments && invoiceData.payments.length > 0
+			? `
 				<div class="payments">
 					<div style="font-weight: bold; margin-bottom: 5px; font-size: 12px;">Payments:</div>
 					${invoiceData.payments
-						.map(
-							(payment) => `
+				.map(
+					(payment) => `
 						<div class="payment-row">
 							<span>${payment.mode_of_payment}:</span>
 							<span>${formatCurrency(payment.amount)}</span>
 						</div>
 					`,
-						)
-						.join("")}
+				)
+				.join("")}
 					<div class="payment-row total-paid">
 						<span>${__('Total Paid:')}</span>
 						<span>${formatCurrency(invoiceData.paid_amount || 0)}</span>
 					</div>
-					${
-						invoiceData.change_amount && invoiceData.change_amount > 0
-							? `
+					${invoiceData.change_amount && invoiceData.change_amount > 0
+				? `
 					<div class="payment-row" style="font-weight: bold; margin-top: 5px;">
 						<span>${__('Change:')}</span>
 						<span>${formatCurrency(invoiceData.change_amount)}</span>
 					</div>
 					`
-							: ""
-					}
-					${
-						invoiceData.outstanding_amount && invoiceData.outstanding_amount > 0
-							? `
+				: ""
+			}
+					${invoiceData.outstanding_amount && invoiceData.outstanding_amount > 0
+				? `
 					<div class="outstanding-row">
 						<span>${__('BALANCE DUE:')}</span>
 						<span>${formatCurrency(invoiceData.outstanding_amount)}</span>
 					</div>
 					`
-							: ""
-					}
+				: ""
+			}
 				</div>
 				`
-						: ""
-				}
+			: ""
+		}
 
 				<!-- Footer -->
 				<div class="footer">
@@ -459,7 +450,7 @@ export function printInvoiceCustom(invoiceData) {
 			</div>
 		</body>
 		</html>
-	`
+`
 
 	printWindow.document.write(printContent)
 	printWindow.document.close()
@@ -477,11 +468,11 @@ function formatCurrency(amount) {
 }
 
 /**
- * Print invoice by name, fetching print format from POS Profile
- * @param {string} invoiceName - The name of the invoice to print
- * @param {string} printFormat - Optional print format override
- * @param {string} letterhead - Optional letterhead override
- */
+* Print invoice by name, fetching print format from POS Profile
+* @param {string} invoiceName - The name of the invoice to print
+* @param {string} printFormat - Optional print format override
+* @param {string} letterhead - Optional letterhead override
+*/
 export async function printInvoiceByName(
 	invoiceName,
 	printFormat = null,
@@ -519,6 +510,43 @@ export async function printInvoiceByName(
 		return await printInvoice(invoiceDoc, printFormat, letterhead)
 	} catch (error) {
 		log.error("Error fetching invoice for print:", error)
+		throw error
+	}
+}
+
+/**
+* Print a payment receipt
+* @param {Object} paymentData - The payment record with voucher_type and voucher_no
+*/
+export async function printPaymentReceipt(paymentData) {
+	try {
+		if (!paymentData || !paymentData.voucher_no) {
+			throw new Error("Invalid payment data")
+		}
+
+		if (paymentData.voucher_type === "Payment Entry") {
+			// For Payment Entry, use standard Frappe print view
+			const params = new URLSearchParams({
+				doctype: "Payment Entry",
+				name: paymentData.voucher_no,
+				format: "Standard", // Or a specific receipt format if available
+				trigger_print: 1,
+				no_letterhead: 1,
+				_lang: "en",
+			})
+			const printUrl = `/printview?${params.toString()}`
+			const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
+			if (!printWindow) throw new Error("Popup blocked")
+		} else if (paymentData.voucher_type === "Sales Invoice") {
+			// For POS payments (Sales Invoice), print the full invoice
+			await printInvoiceByName(paymentData.voucher_no)
+		} else {
+			throw new Error(`Unsupported voucher type: ${paymentData.voucher_type}`)
+		}
+
+		return true
+	} catch (error) {
+		log.error("Error printing payment receipt:", error)
 		throw error
 	}
 }

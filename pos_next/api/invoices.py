@@ -9,6 +9,7 @@ from frappe import _
 from frappe.utils import flt, cint, nowdate, nowtime, get_datetime, cstr
 from erpnext.stock.doctype.batch.batch import get_batch_qty, get_batch_no
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
+from pos_next.api.partial_payments import enrich_invoice_with_payment_history
 
 try:
     from erpnext.accounts.doctype.pricing_rule.pricing_rule import (
@@ -1144,8 +1145,10 @@ def get_invoice(invoice_name):
 
 	# Get invoice document
 	invoice = frappe.get_doc("Sales Invoice", invoice_name)
+	invoice_dict = invoice.as_dict()
 
-	return invoice.as_dict()
+	# Enrich with full payment history from Payment Ledger
+	return enrich_invoice_with_payment_history(invoice_dict, include_metadata=True)
 
 
 @frappe.whitelist()

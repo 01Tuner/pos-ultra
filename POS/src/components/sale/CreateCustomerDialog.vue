@@ -3,16 +3,29 @@
 		<template #body-content>
 			<div class="flex flex-col gap-6">
 				<!-- Customer Name (Required) -->
-				<div>
-					<label class="block text-start text-sm font-medium text-gray-700 mb-2">
-						{{ __("Customer Name") }} <span class="text-red-500">*</span>
-					</label>
-					<Input
-						v-model="customerData.customer_name"
-						type="text"
-						:placeholder="__('Enter customer name')"
-						required
-					/>
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label class="block text-start text-sm font-medium text-gray-700 mb-2">
+							{{ __("Customer Name") }} <span class="text-red-500">*</span>
+						</label>
+						<Input
+							v-model="customerData.customer_name"
+							type="text"
+							:placeholder="__('Enter customer name')"
+							required
+						/>
+					</div>
+					<!-- VAT Registration Number -->
+					<div>
+						<label class="block text-start text-sm font-medium text-gray-700 mb-2">
+							{{ __("VAT Registration Number") }}
+						</label>
+						<Input
+							v-model="customerData.custom_vat_registration_number"
+							type="text"
+							:placeholder="__('Enter VAT number')"
+						/>
+					</div>
 				</div>
 
 				<!-- Mobile Number with Country Code Selector -->
@@ -99,36 +112,116 @@
 					<Input v-model="customerData.email_id" type="email" :placeholder="__('Enter email address')" />
 				</div>
 
-				<!-- Customer Group -->
-				<div>
-					<label class="block text-start text-sm font-medium text-gray-700 mb-2">
-						{{ __("Customer Group") }}
-					</label>
-					<select
-						v-model="customerData.customer_group"
-						class="w-full px-8 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-					>
-						<option value="">{{ __("Select Customer Group") }}</option>
-						<option v-for="group in customerGroups" :key="group" :value="group">
-							{{ group }}
-						</option>
-					</select>
+				<!-- Territory -->
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label class="block text-start text-sm font-medium text-gray-700 mb-2">
+							{{ __("Customer Group") }}
+						</label>
+						<select
+							v-model="customerData.customer_group"
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+						>
+							<option value="">{{ __("Select Customer Group") }}</option>
+							<option v-for="group in customerGroups" :key="group" :value="group">
+								{{ group }}
+							</option>
+						</select>
+					</div>
+					<div>
+						<label class="block text-start text-sm font-medium text-gray-700 mb-2">
+							{{ __("Territory") }}
+						</label>
+						<select
+							v-model="customerData.territory"
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+						>
+							<option value="">{{ __("Select Territory") }}</option>
+							<option v-for="territory in territories" :key="territory" :value="territory">
+								{{ territory }}
+							</option>
+						</select>
+					</div>
 				</div>
 
-				<!-- Territory -->
-				<div>
-					<label class="block text-start text-sm font-medium text-gray-700 mb-2">
-						{{ __("Territory") }}
-					</label>
-					<select
-						v-model="customerData.territory"
-						class="w-full px-8 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-					>
-						<option value="">{{ __("Select Territory") }}</option>
-						<option v-for="territory in territories" :key="territory" :value="territory">
-							{{ territory }}
-						</option>
-					</select>
+				<!-- Address Section -->
+				<div class="border-t border-gray-100 pt-6">
+					<h3 class="text-sm font-semibold text-gray-900 mb-4">{{ __("Address Details") }}</h3>
+					
+					<div class="grid grid-cols-2 gap-4 mb-4">
+						<!-- Building Number -->
+						<div>
+							<label class="block text-start text-sm font-medium text-gray-700 mb-2">
+								{{ __("Building Number") }}
+							</label>
+							<Input
+								v-model="addressData.custom_building_number"
+								type="text"
+								:placeholder="__('Building No')"
+							/>
+						</div>
+						<!-- Street Name -->
+						<div>
+							<label class="block text-start text-sm font-medium text-gray-700 mb-2">
+								{{ __("Street Name") }}
+							</label>
+							<Input
+								v-model="addressData.address_line1"
+								type="text"
+								:placeholder="__('Street Name')"
+							/>
+						</div>
+					</div>
+
+					<div class="grid grid-cols-2 gap-4 mb-4">
+						<!-- Additional No (Address Line 2) -->
+						<div>
+							<label class="block text-start text-sm font-medium text-gray-700 mb-2">
+								{{ __("Additional No") }}
+							</label>
+							<Input
+								v-model="addressData.address_line2"
+								type="text"
+								:placeholder="__('Additional No')"
+							/>
+						</div>
+						<!-- Area/District -->
+						<div>
+							<label class="block text-start text-sm font-medium text-gray-700 mb-2">
+								{{ __("Area/District") }}
+							</label>
+							<Input
+								v-model="addressData.custom_area"
+								type="text"
+								:placeholder="__('Area/District')"
+							/>
+						</div>
+					</div>
+
+					<div class="grid grid-cols-2 gap-4">
+						<!-- City -->
+						<div>
+							<label class="block text-start text-sm font-medium text-gray-700 mb-2">
+								{{ __("City") }}
+							</label>
+							<Input
+								v-model="addressData.city"
+								type="text"
+								:placeholder="__('City')"
+							/>
+						</div>
+						<!-- Postal Code -->
+						<div>
+							<label class="block text-start text-sm font-medium text-gray-700 mb-2">
+								{{ __("Postal Code") }}
+							</label>
+							<Input
+								v-model="addressData.pincode"
+								type="text"
+								:placeholder="__('Postal Code')"
+							/>
+						</div>
+					</div>
 				</div>
 			</div>
 		</template>
@@ -235,6 +328,18 @@ const customerData = ref({
 	email_id: "",
 	customer_group: "Individual",
 	territory: "All Territories",
+	custom_vat_registration_number: "",
+})
+
+const addressData = ref({
+	name: "",
+	custom_building_number: "",
+	address_line1: "",
+	address_line2: "",
+	custom_area: "",
+	city: "",
+	pincode: "",
+	country: "",
 })
 
 // =============================================================================
@@ -342,9 +447,13 @@ const createCustomerResource = createResource({
 			territory: customerData.value.territory || __("All Territories"),
 			mobile_no: customerData.value.mobile_no || "",
 			email_id: customerData.value.email_id || "",
+			custom_vat_registration_number: customerData.value.custom_vat_registration_number || "",
 		},
 	}),
-	onSuccess: (data) => {
+	onSuccess: async (data) => {
+		if (data.name) {
+			await saveAddress(data.name)
+		}
 		showSuccess(__("Customer {0} created successfully", [data.customer_name]))
 		emit("customer-created", data)
 		show.value = false
@@ -366,9 +475,11 @@ const updateCustomerResource = createResource({
 			territory: customerData.value.territory || __("All Territories"),
 			mobile_no: customerData.value.mobile_no || "",
 			email_id: customerData.value.email_id || "",
+			custom_vat_registration_number: customerData.value.custom_vat_registration_number || "",
 		},
 	}),
-	onSuccess: (data) => {
+	onSuccess: async (data) => {
+		await saveAddress(props.customer?.name)
 		showSuccess(__("Customer {0} updated successfully", [data.customer_name]))
 		emit("customer-updated", data)
 		show.value = false
@@ -405,12 +516,105 @@ const posProfileResource = createResource({
 		fieldname: ["country"],
 	}),
 	auto: false,
-	onSuccess: (data) => setCountryFromName(data?.country || "Egypt"),
+	onSuccess: (data) => {
+		const country = data?.country || "Egypt"
+		setCountryFromName(country)
+		addressData.value.country = country
+	},
 	onError: (err) => {
 		log.error("Error loading POS Profile", err)
 		selectedCountryCode.value = "+20"
+		addressData.value.country = "Egypt"
 	},
 })
+
+const saveAddress = async (customerName) => {
+	// Check if any address field is filled
+	const hasAddress =
+		addressData.value.custom_building_number ||
+		addressData.value.address_line1 ||
+		addressData.value.address_line2 ||
+		addressData.value.custom_area ||
+		addressData.value.city
+
+	if (!hasAddress) return
+
+	const addressDoc = {
+		doctype: "Address",
+		address_title: customerData.value.customer_name,
+		address_type: "Billing",
+		custom_building_number: addressData.value.custom_building_number || "",
+		address_line1: addressData.value.address_line1 || "",
+		address_line2: addressData.value.address_line2 || "",
+		custom_area: addressData.value.custom_area || "",
+		city: addressData.value.city || "",
+		pincode: addressData.value.pincode || "",
+		country: addressData.value.country || "Egypt",
+		links: [
+			{
+				link_doctype: "Customer",
+				link_name: customerName,
+			},
+		],
+	}
+
+	try {
+		if (addressData.value.name) {
+			// Update existing address
+			await createResource({
+				url: "frappe.client.set_value",
+				params: {
+					doctype: "Address",
+					name: addressData.value.name,
+					fieldname: addressDoc,
+				},
+			}).submit()
+		} else {
+			// Create new address
+			await createResource({
+				url: "frappe.client.insert",
+				params: {
+					doc: addressDoc,
+				},
+			}).submit()
+		}
+	} catch (err) {
+		log.error("Error saving address", err)
+	}
+}
+
+const fetchCustomerAddress = async (customerName) => {
+	try {
+		const addresses = await createResource({
+			url: "frappe.client.get_list",
+			params: {
+				doctype: "Address",
+				filters: {
+					link_doctype: "Customer",
+					link_name: customerName,
+				},
+				fields: ["*"],
+				limit_page_length: 1,
+			},
+		}).submit()
+
+		if (addresses && addresses.length > 0) {
+			const addr = addresses[0]
+			addressData.value = {
+				name: addr.name,
+				custom_building_number: addr.custom_building_number || "",
+				address_line1: addr.address_line1 || "",
+				address_line2: addr.address_line2 || "",
+				custom_area: addr.custom_area || "",
+				city: addr.city || "",
+				pincode: addr.pincode || "",
+				country: addr.country || "",
+			}
+		}
+	} catch (err) {
+		log.error("Error fetching address", err)
+	}
+}
 
 // =============================================================================
 // Dialog Lifecycle
@@ -430,6 +634,11 @@ const loadDialogData = async () => {
 		await posProfileResource.reload()
 	} else {
 		selectedCountryCode.value = "+20"
+		addressData.value.country = "Egypt"
+	}
+
+	if (isEditMode.value) {
+		await fetchCustomerAddress(props.customer.name)
 	}
 }
 
@@ -463,6 +672,17 @@ const resetForm = () => {
 		email_id: "",
 		customer_group: "Individual",
 		territory: "All Territories",
+		custom_vat_registration_number: "",
+	})
+	Object.assign(addressData.value, {
+		name: "",
+		custom_building_number: "",
+		address_line1: "",
+		address_line2: "",
+		custom_area: "",
+		city: "",
+		pincode: "",
+		country: addressData.value.country || "Egypt",
 	})
 	selectedCountryCode.value = ""
 	phoneNumber.value = ""
@@ -486,6 +706,7 @@ watch(
 			customerData.value.email_id = customer.email_id || ""
 			customerData.value.customer_group = customer.customer_group || "Individual"
 			customerData.value.territory = customer.territory || "All Territories"
+			customerData.value.custom_vat_registration_number = customer.custom_vat_registration_number || ""
 			// Handle mobile_no with country code
 			if (customer.mobile_no) {
 				customerData.value.mobile_no = customer.mobile_no

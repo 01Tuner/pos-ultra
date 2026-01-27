@@ -179,11 +179,28 @@
 								:key="idx"
 								class="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded-lg"
 							>
-								<div class="text-start">
+								<div class="text-start flex-1">
 									<div class="text-sm font-medium text-gray-900">{{ payment.mode_of_payment }}</div>
-									<div v-if="payment.account" class="text-xs text-gray-500">{{ payment.account }}</div>
+									<div v-if="payment.voucher_no" class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-2">
+										<span>{{ payment.voucher_no }}</span>
+										<span v-if="payment.creation" class="inline-flex items-center">
+											<span class="w-1 h-1 rounded-full bg-gray-400 mx-1"></span>
+											{{ formatDate(payment.creation) }} {{ formatTime(payment.creation) }}
+										</span>
+									</div>
 								</div>
-								<div class="text-sm font-semibold text-green-700">{{ formatCurrency(payment.amount) }}</div>
+								<div class="flex items-center gap-3">
+									<div class="text-sm font-semibold text-green-700">{{ formatCurrency(payment.amount) }}</div>
+									<button
+										@click="handlePrintReceipt(payment)"
+										class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+										:title="__('Print Receipt')"
+									>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+										</svg>
+									</button>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -261,6 +278,7 @@
 <script setup>
 import { useFormatters } from "@/composables/useFormatters"
 import { formatCurrency as formatCurrencyUtil } from "@/utils/currency"
+import { printPaymentReceipt } from "@/utils/printInvoice"
 import { getInvoiceStatusColor } from "@/utils/invoice"
 import { logger } from "@/utils/logger"
 import { Button, Dialog, call } from "frappe-ui"
@@ -292,12 +310,17 @@ const invoiceData = ref(null)
 // Computed: Check if this is a credit sale (Pay on Account - no payments, full outstanding)
 const isCreditSale = computed(() => {
 	if (!invoiceData.value) return false
+	// Credit sale if no payments array or empty array
 	const hasNoPayments = !invoiceData.value.payments || invoiceData.value.payments.length === 0
+	if (hasNoPayments) return true
+
+	// Also check if total paid is zero compared to grand total
 	const totalPaid = invoiceData.value.payments?.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0) || 0
 	const grandTotal = Math.abs(invoiceData.value.grand_total || 0)
 	const outstanding = Math.abs(invoiceData.value.outstanding_amount || 0)
-	// Credit sale if no payments and outstanding equals grand total
-	return hasNoPayments || (totalPaid < 0.01 && Math.abs(outstanding - grandTotal) < 0.01)
+
+	// Credit sale if total paid is near zero and outstanding is near grand total
+	return totalPaid < 0.01 && Math.abs(outstanding - grandTotal) < 0.01
 })
 
 // Computed: Check if this is a credit sale return (return with no payments)
@@ -364,6 +387,14 @@ async function loadInvoiceDetails() {
 function handlePrint() {
 	if (!invoiceData.value) return
 	emit("print-invoice", invoiceData.value)
+}
+
+async function handlePrintReceipt(payment) {
+	try {
+		await printPaymentReceipt(payment)
+	} catch (error) {
+		log.error("Error calling printPaymentReceipt:", error)
+	}
 }
 </script>
 
