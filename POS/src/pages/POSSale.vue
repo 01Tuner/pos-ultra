@@ -604,6 +604,9 @@
 				:pos-profile="shiftStore.profileName"
 				:company="shiftStore.profileCompany"
 			/>
+			
+			<!-- ERPNext Reports Dialog -->
+			<ReportsDialog v-model="showReportsDialog" />
 
 			<!-- Invoice Management -->
 			<InvoiceManagement
@@ -924,7 +927,7 @@
 			/>
 
 			<!-- Footer -->
-			<POSFooter />
+			<!-- <POSFooter /> -->
 		</template>
 	</div>
 </template>
@@ -934,7 +937,7 @@ import ShiftClosingDialog from "@/components/ShiftClosingDialog.vue";
 import ShiftOpeningDialog from "@/components/ShiftOpeningDialog.vue";
 import ClearCacheOverlay from "@/components/common/ClearCacheOverlay.vue";
 import LoadingSpinner from "@/components/common/LoadingSpinner.vue";
-import POSFooter from "@/components/common/POSFooter.vue";
+// import POSFooter from "@/components/common/POSFooter.vue";
 import ManagementSlider from "@/components/pos/ManagementSlider.vue";
 import POSHeader from "@/components/pos/POSHeader.vue";
 import BatchSerialDialog from "@/components/sale/BatchSerialDialog.vue";
@@ -955,6 +958,7 @@ import WarehouseAvailabilityDialog from "@/components/sale/WarehouseAvailability
 import POSSettings from "@/components/settings/POSSettings.vue";
 import InvoiceManagement from "@/components/invoices/InvoiceManagement.vue";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog.vue";
+import ReportsDialog from "@/components/sale/ReportsDialog.vue";
 import { useRealtimeStock } from "@/composables/useRealtimeStock";
 import { usePOSEvents } from "@/composables/usePOSEvents";
 import { useLocale } from "@/composables/useLocale";
@@ -1061,6 +1065,7 @@ const showInvoiceManagement = ref(false);
 
 // Invoice Detail dialog
 const showInvoiceDetail = ref(false);
+const showReportsDialog = ref(false);
 const selectedInvoiceForView = ref(null);
 
 // Invoice history data (used by InvoiceManagement component)
@@ -2499,6 +2504,8 @@ function handleManagementMenuClick(menuItem) {
 	} else if (menuItem === "products") {
 		// Open Stock Lookup dialog in search mode
 		showStockLookup.value = true;
+	} else if (menuItem === "reports") {
+		showReportsDialog.value = true;
 	}
 }
 
