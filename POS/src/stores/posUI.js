@@ -58,7 +58,7 @@ export const usePOSUIStore = defineStore("posUI", () => {
 	const isResizing = ref(false)
 
 	// Computed
-	const isDesktop = computed(() => windowWidth.value >= 1024)
+	const isDesktop = computed(() => windowWidth.value >= 1280)
 
 	// Actions
 	function setLoading(loading) {

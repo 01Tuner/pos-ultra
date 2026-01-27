@@ -1,165 +1,77 @@
 <template>
-	<div
-		class="flex flex-col bg-gray-50 overflow-x-hidden"
-		style="height: 100vh; max-height: 100vh"
-	>
+	<div class="flex flex-col bg-gray-50 overflow-x-hidden" style="height: 100vh; max-height: 100vh">
 		<!-- Loading State -->
 		<LoadingSpinner v-if="uiStore.isLoading" />
 
 		<!-- Main App -->
 		<template v-else>
 			<!-- Header -->
-			<POSHeader
-				:current-time="shiftStore.currentTime"
-				:shift-duration="shiftStore.shiftDuration"
-				:has-open-shift="shiftStore.hasOpenShift"
-				:profile-name="shiftStore.profileName"
-				:user-name="userName"
-				:user-image="userImage"
-				:is-offline="offlineStore.isOffline"
-				:is-syncing="offlineStore.isSyncing"
+			<POSHeader :current-time="shiftStore.currentTime" :shift-duration="shiftStore.shiftDuration"
+				:has-open-shift="shiftStore.hasOpenShift" :profile-name="shiftStore.profileName" :user-name="userName"
+				:user-image="userImage" :is-offline="offlineStore.isOffline" :is-syncing="offlineStore.isSyncing"
 				:pending-invoices-count="offlineStore.pendingInvoicesCount"
-				:is-any-dialog-open="uiStore.isAnyDialogOpen"
-				:cache-syncing="itemStore.cacheSyncing"
-				:cache-stats="itemStore.cacheStats"
-				:stock-sync-active="isStockSyncActive"
-				:is-refreshing="stockStore.refreshing"
-				@sync-click="handleSyncClick"
-				@printer-click="uiStore.showHistoryDialog = true"
-				@refresh-click="handleRefresh"
-				@clear-cache="handleClearCache"
-				@logout="uiStore.showLogoutDialog = true"
-			>
+				:is-any-dialog-open="uiStore.isAnyDialogOpen" :cache-syncing="itemStore.cacheSyncing"
+				:cache-stats="itemStore.cacheStats" :stock-sync-active="isStockSyncActive"
+				:is-refreshing="stockStore.refreshing" @sync-click="handleSyncClick"
+				@printer-click="uiStore.showHistoryDialog = true" @refresh-click="handleRefresh"
+				@clear-cache="handleClearCache" @logout="uiStore.showLogoutDialog = true">
 				<template #menu-items>
-					<button
-						v-if="shiftStore.hasOpenShift"
-						@click="uiStore.showOpenShiftDialog = true"
-						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3 transition-colors"
-					>
-						<svg
-							class="w-5 h-5 text-blue-600"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
+					<button v-if="shiftStore.hasOpenShift" @click="uiStore.showOpenShiftDialog = true"
+						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 flex items-center gap-3 transition-colors">
+						<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 						</svg>
 						<span>{{ __("View Shift") }}</span>
 					</button>
-					<button
-						@click="uiStore.showDraftDialog = true"
-						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 flex items-center gap-3 transition-colors relative"
-					>
-						<svg
-							class="w-5 h-5 text-purple-600"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-							/>
+					<button @click="uiStore.showDraftDialog = true"
+						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 flex items-center gap-3 transition-colors relative">
+						<svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 						</svg>
 						<span>{{ __("Draft Invoices") }}</span>
-						<span
-							v-if="draftsStore.draftsCount > 0"
-							class="ms-auto text-xs bg-purple-600 text-white px-1.5 py-0.5 rounded-full"
-						>
+						<span v-if="draftsStore.draftsCount > 0"
+							class="ms-auto text-xs bg-purple-600 text-white px-1.5 py-0.5 rounded-full">
 							{{ draftsStore.draftsCount }}
 						</span>
 					</button>
-					<button
-						@click="uiStore.showHistoryDialog = true"
-						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors"
-					>
-						<svg
-							class="w-5 h-5 text-indigo-600"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-							/>
+					<button @click="uiStore.showHistoryDialog = true"
+						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
+						<svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 						</svg>
 						<span>{{ __("Invoice History") }}</span>
 					</button>
-					<button
-						v-if="offlineStore.pendingInvoicesCount > 0"
-						@click="
-							uiStore.showOfflineInvoicesDialog = true;
-							offlineStore.loadPendingInvoices();
-						"
-						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3 transition-colors relative"
-					>
-						<svg
-							class="w-5 h-5 text-orange-600"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
+					<button v-if="offlineStore.pendingInvoicesCount > 0" @click="
+						uiStore.showOfflineInvoicesDialog = true;
+					offlineStore.loadPendingInvoices();
+					" class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3 transition-colors relative">
+						<svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+								d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 						</svg>
 						<span>{{ __("Offline Invoices") }}</span>
-						<span
-							class="ms-auto text-xs bg-orange-600 text-white px-1.5 py-0.5 rounded-full"
-						>
+						<span class="ms-auto text-xs bg-orange-600 text-white px-1.5 py-0.5 rounded-full">
 							{{ offlineStore.pendingInvoicesCount }}
 						</span>
 					</button>
-					<button
-						@click="uiStore.showReturnDialog = true"
-						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 flex items-center gap-3 transition-colors"
-					>
-						<svg
-							class="w-5 h-5 text-red-600"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-							/>
+					<button @click="uiStore.showReturnDialog = true"
+						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 flex items-center gap-3 transition-colors">
+						<svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+								d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
 						</svg>
 						<span>{{ __("Return Invoice") }}</span>
 					</button>
 				</template>
 				<template #additional-actions>
-					<button
-						@click="handleCloseShift()"
-						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3 transition-colors"
-					>
-						<svg
-							class="w-5 h-5 text-orange-600"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
+					<button @click="handleCloseShift()"
+						class="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 flex items-center gap-3 transition-colors">
+						<svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 						</svg>
 						<span>{{ __("Close Shift") }}</span>
 					</button>
@@ -167,83 +79,43 @@
 			</POSHeader>
 
 			<!-- Main Content: Responsive Layout -->
-			<div
-				v-if="shiftStore.hasOpenShift"
-				class="flex-1 flex overflow-hidden relative"
-				style="max-height: calc(100vh - 60px - var(--header-height, 60px))"
-			>
+			<div v-if="shiftStore.hasOpenShift" class="flex-1 flex overflow-hidden relative"
+				style="max-height: calc(100vh - 60px - var(--header-height, 60px))">
 				<!-- Icon-Only Management Slider - Always Visible -->
 				<ManagementSlider @menu-clicked="handleManagementMenuClick" />
 
 				<!-- Main Content Container -->
-				<div
-					ref="containerRef"
-					class="flex-1 flex flex-col lg:flex-row overflow-hidden relative"
-				>
+				<div ref="containerRef" class="flex-1 flex flex-col xl:flex-row overflow-hidden relative pb-16 xl:pb-0">
 					<!-- Mobile Tab Navigation -->
-					<div
-						class="lg:hidden bg-white border-b border-gray-200 flex shadow-sm sticky top-0 z-[100]"
-					>
-						<button
-							@click="handleTabSwitch('items')"
-							:class="[
-								'flex-1 px-3 py-3 text-sm font-semibold transition-[color,background-color,border-color] duration-100 relative touch-manipulation',
-								uiStore.mobileActiveTab === 'items'
-									? 'text-blue-600 border-b-3 border-blue-600 bg-blue-50'
-									: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 active:bg-gray-100',
-							]"
-							:aria-label="__('View items')"
-							:aria-selected="uiStore.mobileActiveTab === 'items'"
-							role="tab"
-						>
+					<div class="xl:hidden bg-white border-b border-gray-200 flex shadow-sm sticky top-0 z-[100]">
+						<button @click="handleTabSwitch('items')" :class="[
+							'flex-1 px-3 py-3 text-sm font-semibold transition-[color,background-color,border-color] duration-100 relative touch-manipulation',
+							uiStore.mobileActiveTab === 'items'
+								? 'text-blue-600 border-b-3 border-blue-600 bg-blue-50'
+								: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 active:bg-gray-100',
+						]" :aria-label="__('View items')" :aria-selected="uiStore.mobileActiveTab === 'items'" role="tab">
 							<div class="flex items-center justify-center gap-1.5">
-								<svg
-									class="w-5 h-5"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-									/>
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+										d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
 								</svg>
 								<span>{{ __("Items") }}</span>
 							</div>
 						</button>
-						<button
-							@click="handleTabSwitch('cart')"
-							:class="[
-								'flex-1 px-3 py-3 text-sm font-semibold transition-[color,background-color,border-color] duration-100 relative touch-manipulation',
-								uiStore.mobileActiveTab === 'cart'
-									? 'text-blue-600 border-b-3 border-blue-600 bg-blue-50'
-									: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 active:bg-gray-100',
-							]"
-							:aria-label="__('View cart')"
-							:aria-selected="uiStore.mobileActiveTab === 'cart'"
-							role="tab"
-						>
+						<button @click="handleTabSwitch('cart')" :class="[
+							'flex-1 px-3 py-3 text-sm font-semibold transition-[color,background-color,border-color] duration-100 relative touch-manipulation',
+							uiStore.mobileActiveTab === 'cart'
+								? 'text-blue-600 border-b-3 border-blue-600 bg-blue-50'
+								: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 active:bg-gray-100',
+						]" :aria-label="__('View cart')" :aria-selected="uiStore.mobileActiveTab === 'cart'" role="tab">
 							<div class="flex items-center justify-center gap-1.5">
-								<svg
-									class="w-5 h-5"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-									/>
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+										d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
 								</svg>
 								<span>{{ __("Cart") }}</span>
-								<span
-									v-if="cartStore.itemCount > 0"
-									class="bg-blue-600 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow-sm"
-								>
+								<span v-if="cartStore.itemCount > 0"
+									class="bg-blue-600 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow-sm">
 									{{ cartStore.itemCount }}
 								</span>
 							</div>
@@ -252,135 +124,83 @@
 
 					<!-- Left: Items Selector (Desktop) / Tab Content (Mobile) -->
 					<keep-alive>
-						<div
-							v-if="uiStore.isDesktop || uiStore.mobileActiveTab === 'items'"
-							:style="{
-								width: uiStore.isDesktop ? uiStore.leftPanelWidth + 'px' : '100%',
-							}"
-							:class="[
-								'flex flex-col bg-white overflow-hidden',
-								uiStore.isDesktop ? 'flex-shrink-0' : 'flex-1',
-							]"
-							style="contain: layout style paint"
-						>
-							<ItemsSelector
-								ref="itemsSelectorRef"
-								:pos-profile="shiftStore.profileName"
-								:cart-items="cartStore.invoiceItems"
-								:currency="shiftStore.profileCurrency"
-								@item-selected="handleItemSelected"
-							/>
+						<div v-if="uiStore.isDesktop || uiStore.mobileActiveTab === 'items'" :style="{
+							width: uiStore.isDesktop ? uiStore.leftPanelWidth + 'px' : '100%',
+						}" :class="[
+							'flex flex-col bg-white overflow-hidden',
+							uiStore.isDesktop ? 'flex-shrink-0' : 'flex-1',
+						]" style="contain: layout style paint">
+							<ItemsSelector ref="itemsSelectorRef" :pos-profile="shiftStore.profileName"
+								:cart-items="cartStore.invoiceItems" :currency="shiftStore.profileCurrency"
+								@item-selected="handleItemSelected" />
 						</div>
 					</keep-alive>
 
 					<!-- Draggable Divider (Desktop Only) -->
-					<div
-						v-if="uiStore.isDesktop"
-						ref="dividerRef"
-						role="separator"
-						aria-orientation="vertical"
+					<div v-if="uiStore.isDesktop" ref="dividerRef" role="separator" aria-orientation="vertical"
 						@pointerdown="startResize"
-						class="w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize relative flex-shrink-0 transition-[background-color] duration-100 hidden lg:block"
+						class="w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize relative flex-shrink-0 transition-[background-color] duration-100 hidden xl:block"
 						:class="{
 							'bg-blue-500': uiStore.isResizing,
 							'pointer-events-none opacity-0': uiStore.isAnyDialogOpen,
 							'z-[1]': !uiStore.isAnyDialogOpen,
-						}"
-					>
-						<div
-							class="absolute inset-y-0 -left-2 -right-2"
-							style="cursor: col-resize"
-						></div>
-						<div
-							class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-12 bg-gray-400 rounded-full"
+						}">
+						<div class="absolute inset-y-0 -left-2 -right-2" style="cursor: col-resize"></div>
+						<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-12 bg-gray-400 rounded-full"
 							:class="{
 								'bg-blue-600': uiStore.isResizing,
 								'bg-blue-500': !uiStore.isResizing,
-							}"
-							style="transition: background-color 0.1s ease; opacity: 0.8"
-						></div>
+							}" style="transition: background-color 0.1s ease; opacity: 0.8"></div>
 					</div>
 
 					<!-- Right: Invoice Cart (Desktop) / Tab Content (Mobile) -->
 					<keep-alive>
-						<div
-							v-if="uiStore.isDesktop || uiStore.mobileActiveTab === 'cart'"
-							:class="[
-								'flex flex-col bg-gray-50 overflow-hidden',
-								uiStore.isDesktop ? 'flex-1' : 'flex-1',
-							]"
-							style="min-width: 300px; contain: layout style paint"
-						>
-							<InvoiceCart
-								:items="cartStore.invoiceItems"
-								:customer="cartStore.customer"
-								:subtotal="cartStore.subtotal"
-								:tax-amount="cartStore.totalTax"
-								:discount-amount="cartStore.totalDiscount"
-								:grand-total="cartStore.grandTotal"
-								:pos-profile="shiftStore.profileName"
-								:currency="shiftStore.profileCurrency"
-								:applied-offers="cartStore.appliedOffers"
-								:warehouses="profileWarehouses"
-								@update-quantity="cartStore.updateItemQuantity"
-								@remove-item="
+						<div v-if="uiStore.isDesktop || uiStore.mobileActiveTab === 'cart'" :class="[
+							'flex flex-col bg-gray-50 overflow-hidden',
+							uiStore.isDesktop ? 'flex-1' : 'flex-1',
+						]" style="min-width: 300px; contain: layout style paint">
+							<InvoiceCart :items="cartStore.invoiceItems" :customer="cartStore.customer"
+								:subtotal="cartStore.subtotal" :tax-amount="cartStore.totalTax"
+								:discount-amount="cartStore.totalDiscount" :grand-total="cartStore.grandTotal"
+								:pos-profile="shiftStore.profileName" :currency="shiftStore.profileCurrency"
+								:applied-offers="cartStore.appliedOffers" :warehouses="profileWarehouses"
+								@update-quantity="cartStore.updateItemQuantity" @remove-item="
 									(itemCode, uom) => cartStore.removeItem(itemCode, uom)
-								"
-								@select-customer="handleCustomerSelected"
-								@create-customer="handleCreateCustomer"
-								@edit-customer="handleEditCustomer"
-								@proceed-to-payment="handleProceedToPayment"
-								@clear-cart="handleClearCart"
-								@save-draft="handleSaveDraft"
+								" @select-customer="handleCustomerSelected" @create-customer="handleCreateCustomer"
+								@edit-customer="handleEditCustomer" @proceed-to-payment="handleProceedToPayment"
+								@clear-cart="handleClearCart" @save-draft="handleSaveDraft"
 								@apply-coupon="uiStore.showCouponDialog = true"
-								@show-offers="uiStore.showOffersDialog = true"
-								@remove-offer="
+								@show-offers="uiStore.showOffersDialog = true" @remove-offer="
 									(offer) =>
 										cartStore.removeOffer(
 											offer,
 											shiftStore.currentProfile,
 											offersDialogRef.value
 										)
-								"
-								@update-uom="cartStore.changeItemUOM"
-								@edit-item="handleEditItem"
+								" @update-uom="cartStore.changeItemUOM" @edit-item="handleEditItem"
 								@view-shift="uiStore.showOpenShiftDialog = true"
 								@show-drafts="uiStore.showDraftDialog = true"
 								@show-history="uiStore.showHistoryDialog = true"
-								@show-return="uiStore.showReturnDialog = true"
-								@close-shift="handleCloseShift()"
-							/>
+								@show-return="uiStore.showReturnDialog = true" @close-shift="handleCloseShift()" />
 						</div>
 					</keep-alive>
 
 					<!-- Mobile Floating Cart Button -->
-					<button
-						v-if="
-							!uiStore.isDesktop &&
-							uiStore.mobileActiveTab === 'items' &&
-							cartStore.itemCount > 0
-						"
-						@click="uiStore.setMobileTab('cart')"
-						class="lg:hidden fixed bottom-20 end-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-4 shadow-2xl hover:shadow-3xl hover:from-blue-700 hover:to-blue-800 active:from-blue-800 active:to-blue-900 transition-[background,box-shadow,transform] duration-200 z-50 touch-manipulation active:scale-95 ring-4 ring-blue-100"
-						:aria-label="__('View cart with {0} items', [cartStore.itemCount])"
-					>
+					<button v-if="
+						!uiStore.isDesktop &&
+						uiStore.mobileActiveTab === 'items' &&
+						cartStore.itemCount > 0
+					" @click="uiStore.setMobileTab('cart')"
+						class="xl:hidden fixed bottom-20 end-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-4 shadow-2xl hover:shadow-3xl hover:from-blue-700 hover:to-blue-800 active:from-blue-800 active:to-blue-900 transition-[background,box-shadow,transform] duration-200 z-50 touch-manipulation active:scale-95 ring-4 ring-blue-100"
+						:aria-label="__('View cart with {0} items', [cartStore.itemCount])">
 						<div class="relative">
-							<svg
-								class="w-7 h-7"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-								stroke-width="2.5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-								/>
+							<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+								stroke-width="2.5">
+								<path stroke-linecap="round" stroke-linejoin="round"
+									d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
 							</svg>
 							<span
-								class="absolute -top-2 -end-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] px-1 flex items-center justify-center shadow-lg animate-pulse"
-							>
+								class="absolute -top-2 -end-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] px-1 flex items-center justify-center shadow-lg animate-pulse">
 								{{ cartStore.itemCount }}
 							</span>
 						</div>
@@ -392,27 +212,13 @@
 			</div>
 
 			<!-- No Shift Placeholder -->
-			<div
-				v-else
-				class="flex-1 flex items-center justify-center bg-gray-50"
-				style="max-height: calc(100vh - 60px - var(--header-height, 60px))"
-			>
+			<div v-else class="flex-1 flex items-center justify-center bg-gray-50"
+				style="max-height: calc(100vh - 60px - var(--header-height, 60px))">
 				<div class="text-center">
-					<div
-						class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-blue-100"
-					>
-						<svg
-							class="h-12 w-12 text-blue-600"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
+					<div class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-blue-100">
+						<svg class="h-12 w-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 						</svg>
 					</div>
 					<h3 class="mt-4 text-lg font-medium text-gray-900">
@@ -421,221 +227,122 @@
 					<p class="mt-2 text-sm text-gray-500">
 						{{ __("Please open a shift to start making sales") }}
 					</p>
-					<Button
-						variant="solid"
-						theme="blue"
-						@click="uiStore.showOpenShiftDialog = true"
-						class="mt-6"
-					>
+					<Button variant="solid" theme="blue" @click="uiStore.showOpenShiftDialog = true" class="mt-6">
 						{{ __("Open Shift") }}
 					</Button>
 				</div>
 			</div>
 
 			<!-- Payment Dialog -->
-		<PaymentDialog
-			v-model="uiStore.showPaymentDialog"
-			:grand-total="cartStore.grandTotal"
-			:subtotal="cartStore.subtotal"
-			:pos-profile="shiftStore.profileName"
-			:currency="shiftStore.profileCurrency"
-			:is-offline="offlineStore.isOffline"
-			:allow-partial-payment="posSettingsStore.allowPartialPayment"
-			:allow-credit-sale="posSettingsStore.allowCreditSale"
-			:customer="cartStore.customer"
-			:company="shiftStore.profileCompany"
-			:additional-discount="cartStore.additionalDiscount"
-			:items="cartStore.invoiceItems"
-			:tax-amount="cartStore.totalTax"
-			:discount-amount="cartStore.totalDiscount"
-			:target-doctype="cartStore.targetDoctype"
-			:is-submitting="cartStore.isSubmitting"
-			@payment-completed="handlePaymentCompleted"
-			@update-additional-discount="handleAdditionalDiscountUpdate"
-		/>
+			<PaymentDialog v-model="uiStore.showPaymentDialog" :grand-total="cartStore.grandTotal"
+				:subtotal="cartStore.subtotal" :pos-profile="shiftStore.profileName"
+				:currency="shiftStore.profileCurrency" :is-offline="offlineStore.isOffline"
+				:allow-partial-payment="posSettingsStore.allowPartialPayment"
+				:allow-credit-sale="posSettingsStore.allowCreditSale" :customer="cartStore.customer"
+				:company="shiftStore.profileCompany" :additional-discount="cartStore.additionalDiscount"
+				:items="cartStore.invoiceItems" :tax-amount="cartStore.totalTax"
+				:discount-amount="cartStore.totalDiscount" :target-doctype="cartStore.targetDoctype"
+				:is-submitting="cartStore.isSubmitting" @payment-completed="handlePaymentCompleted"
+				@update-additional-discount="handleAdditionalDiscountUpdate" />
 
 			<!-- Customer Selection Dialog -->
-			<CustomerDialog
-				v-model="uiStore.showCustomerDialog"
-				:pos-profile="shiftStore.profileName"
-				@customer-selected="handleCustomerSelected"
-			/>
+			<CustomerDialog v-model="uiStore.showCustomerDialog" :pos-profile="shiftStore.profileName"
+				@customer-selected="handleCustomerSelected" />
 
 			<!-- Shift Opening Dialog -->
-			<ShiftOpeningDialog
-				v-model="uiStore.showOpenShiftDialog"
-				@shift-opened="handleShiftOpened"
-			/>
+			<ShiftOpeningDialog v-model="uiStore.showOpenShiftDialog" @shift-opened="handleShiftOpened" />
 
 			<!-- Shift Closing Dialog -->
-			<ShiftClosingDialog
-				v-model="uiStore.showCloseShiftDialog"
-				:opening-shift="shiftStore.currentShift?.name"
-				@shift-closed="handleShiftClosed"
-			/>
+			<ShiftClosingDialog v-model="uiStore.showCloseShiftDialog" :opening-shift="shiftStore.currentShift?.name"
+				@shift-closed="handleShiftClosed" />
 
 			<!-- Draft Invoices Dialog -->
-			<DraftInvoicesDialog
-				v-model="uiStore.showDraftDialog"
-				:currency="shiftStore.profileCurrency"
-				@load-draft="handleLoadDraft"
-				@drafts-updated="draftsStore.updateDraftsCount"
-			/>
+			<DraftInvoicesDialog v-model="uiStore.showDraftDialog" :currency="shiftStore.profileCurrency"
+				@load-draft="handleLoadDraft" @drafts-updated="draftsStore.updateDraftsCount" />
 
 			<!-- Return Invoice Dialog -->
-			<ReturnInvoiceDialog
-				v-model="uiStore.showReturnDialog"
-				:pos-profile="shiftStore.profileName"
-				:pos-opening-shift="shiftStore.currentShift?.name"
-				:currency="shiftStore.profileCurrency"
-				@return-created="handleReturnCreated"
-			/>
+			<ReturnInvoiceDialog v-model="uiStore.showReturnDialog" :pos-profile="shiftStore.profileName"
+				:pos-opening-shift="shiftStore.currentShift?.name" :currency="shiftStore.profileCurrency"
+				@return-created="handleReturnCreated" />
 
 			<!-- Coupon Dialog -->
-			<CouponDialog
-				v-model="uiStore.showCouponDialog"
-				:subtotal="cartStore.subtotal"
-				:items="cartStore.invoiceItems"
-				:pos-profile="shiftStore.profileName"
-				:customer="cartStore.customer?.name || cartStore.customer"
-				:company="shiftStore.profileCompany"
-				:currency="shiftStore.profileCurrency"
-				:applied-coupon="cartStore.appliedCoupon"
-				@discount-applied="handleDiscountApplied"
-				@discount-removed="handleDiscountRemoved"
-			/>
+			<CouponDialog v-model="uiStore.showCouponDialog" :subtotal="cartStore.subtotal"
+				:items="cartStore.invoiceItems" :pos-profile="shiftStore.profileName"
+				:customer="cartStore.customer?.name || cartStore.customer" :company="shiftStore.profileCompany"
+				:currency="shiftStore.profileCurrency" :applied-coupon="cartStore.appliedCoupon"
+				@discount-applied="handleDiscountApplied" @discount-removed="handleDiscountRemoved" />
 
 			<!-- Offers Dialog -->
-			<OffersDialog
-				ref="offersDialogRef"
-				v-model="uiStore.showOffersDialog"
-				:subtotal="cartStore.subtotal"
-				:items="cartStore.invoiceItems"
-				:pos-profile="shiftStore.profileName"
-				:customer="cartStore.customer?.name || cartStore.customer"
-				:company="shiftStore.profileCompany"
-				:currency="shiftStore.profileCurrency"
-				:applied-offers="cartStore.appliedOffers"
-				@apply-offer="handleApplyOffer"
-				@remove-offer="
+			<OffersDialog ref="offersDialogRef" v-model="uiStore.showOffersDialog" :subtotal="cartStore.subtotal"
+				:items="cartStore.invoiceItems" :pos-profile="shiftStore.profileName"
+				:customer="cartStore.customer?.name || cartStore.customer" :company="shiftStore.profileCompany"
+				:currency="shiftStore.profileCurrency" :applied-offers="cartStore.appliedOffers"
+				@apply-offer="handleApplyOffer" @remove-offer="
 					(offer) =>
 						cartStore.removeOffer(
 							offer,
 							shiftStore.currentProfile,
 							offersDialogRef.value
 						)
-				"
-			/>
+				" />
 
 			<!-- Batch/Serial Dialog -->
-			<BatchSerialDialog
-				v-model="uiStore.showBatchSerialDialog"
-				:item="cartStore.pendingItem"
-				:quantity="cartStore.pendingItemQty"
-				:warehouse="shiftStore.profileWarehouse"
-				:pos-profile="cartStore.posProfile"
-				@batch-serial-selected="handleBatchSerialSelected"
-			/>
+			<BatchSerialDialog v-model="uiStore.showBatchSerialDialog" :item="cartStore.pendingItem"
+				:quantity="cartStore.pendingItemQty" :warehouse="shiftStore.profileWarehouse"
+				:pos-profile="cartStore.posProfile" @batch-serial-selected="handleBatchSerialSelected" />
 
 			<!-- Generic Item Selection Dialog -->
-			<ItemSelectionDialog
-				v-model="uiStore.showItemSelectionDialog"
-				:item="cartStore.pendingItem"
-				:mode="cartStore.selectionMode"
-				:pos-profile="shiftStore.profileName"
-				:currency="shiftStore.profileCurrency"
-				@option-selected="handleOptionSelected"
-			/>
+			<ItemSelectionDialog v-model="uiStore.showItemSelectionDialog" :item="cartStore.pendingItem"
+				:mode="cartStore.selectionMode" :pos-profile="shiftStore.profileName"
+				:currency="shiftStore.profileCurrency" @option-selected="handleOptionSelected" />
 
 			<!-- Invoice History Dialog -->
-			<InvoiceHistoryDialog
-				v-model="uiStore.showHistoryDialog"
-				:pos-profile="shiftStore.profileName"
-				:currency="shiftStore.profileCurrency"
-				@create-return="handleCreateReturnFromHistory"
-				@view-invoice="handleViewInvoice"
-				@print-invoice="handlePrintInvoice"
-			/>
+			<InvoiceHistoryDialog v-model="uiStore.showHistoryDialog" :pos-profile="shiftStore.profileName"
+				:currency="shiftStore.profileCurrency" @create-return="handleCreateReturnFromHistory"
+				@view-invoice="handleViewInvoice" @print-invoice="handlePrintInvoice" />
 
 			<!-- Offline Invoices Dialog -->
-			<OfflineInvoicesDialog
-				v-model="uiStore.showOfflineInvoicesDialog"
-				:is-offline="offlineStore.isOffline"
-				:pending-invoices="offlineStore.pendingInvoicesList"
-				:is-syncing="offlineStore.isSyncing"
-				:currency="shiftStore.profileCurrency"
-				@sync-all="handleSyncAll"
-				@delete-invoice="handleDeleteOfflineInvoice"
-				@edit-invoice="handleEditOfflineInvoice"
-				@refresh="offlineStore.loadPendingInvoices"
-			/>
+			<OfflineInvoicesDialog v-model="uiStore.showOfflineInvoicesDialog" :is-offline="offlineStore.isOffline"
+				:pending-invoices="offlineStore.pendingInvoicesList" :is-syncing="offlineStore.isSyncing"
+				:currency="shiftStore.profileCurrency" @sync-all="handleSyncAll"
+				@delete-invoice="handleDeleteOfflineInvoice" @edit-invoice="handleEditOfflineInvoice"
+				@refresh="offlineStore.loadPendingInvoices" />
 
 			<!-- Create/Edit Customer Dialog -->
-			<CreateCustomerDialog
-				v-model="uiStore.showCreateCustomerDialog"
-				:pos-profile="shiftStore.profileName"
-				:initial-name="uiStore.initialCustomerName"
-				:customer="editCustomer"
-				@customer-created="handleCustomerCreated"
-				@customer-updated="handleCustomerUpdated"
-			/>
+			<CreateCustomerDialog v-model="uiStore.showCreateCustomerDialog" :pos-profile="shiftStore.profileName"
+				:initial-name="uiStore.initialCustomerName" :customer="editCustomer"
+				@customer-created="handleCustomerCreated" @customer-updated="handleCustomerUpdated" />
 
 			<!-- Promotion Management -->
-			<PromotionManagement
-				v-model="showPromotionManagement"
-				:pos-profile="shiftStore.profileName"
-				:company="shiftStore.profileCompany"
-				:currency="shiftStore.profileCurrency"
-				@promotion-saved="handlePromotionSaved"
-			/>
+			<PromotionManagement v-model="showPromotionManagement" :pos-profile="shiftStore.profileName"
+				:company="shiftStore.profileCompany" :currency="shiftStore.profileCurrency"
+				@promotion-saved="handlePromotionSaved" />
 
 			<!-- POS Settings -->
-			<POSSettings
-				v-model="showPOSSettings"
-				:pos-profile="shiftStore.profileName"
-				:current-warehouse="shiftStore.profileWarehouse"
-				@warehouse-changed="handleWarehouseChanged"
-			/>
+			<POSSettings v-model="showPOSSettings" :pos-profile="shiftStore.profileName"
+				:current-warehouse="shiftStore.profileWarehouse" @warehouse-changed="handleWarehouseChanged" />
 
 			<!-- Stock Lookup Dialog (Products Menu) -->
-			<WarehouseAvailabilityDialog
-				v-model="showStockLookup"
-				mode="search"
-				:pos-profile="shiftStore.profileName"
-				:company="shiftStore.profileCompany"
-			/>
-			
+			<WarehouseAvailabilityDialog v-model="showStockLookup" mode="search" :pos-profile="shiftStore.profileName"
+				:company="shiftStore.profileCompany" />
+
 			<!-- ERPNext Reports Dialog -->
 			<ReportsDialog v-model="showReportsDialog" />
 
 			<!-- Invoice Management -->
-			<InvoiceManagement
-				v-model="showInvoiceManagement"
-				:pos-profile="shiftStore.profileName"
-				:currency="shiftStore.profileCurrency"
-				:history-invoices="invoiceHistoryData"
-				:draft-invoices="draftsStore.drafts"
-				@view-invoice="handleViewInvoice"
-				@print-invoice="handlePrintInvoice"
-				@load-draft="handleLoadDraftFromManagement"
-				@delete-draft="handleDeleteDraft"
-				@refresh-history="loadInvoiceHistoryData"
-			/>
+			<InvoiceManagement v-model="showInvoiceManagement" :pos-profile="shiftStore.profileName"
+				:currency="shiftStore.profileCurrency" :history-invoices="invoiceHistoryData"
+				:draft-invoices="draftsStore.drafts" @view-invoice="handleViewInvoice"
+				@print-invoice="handlePrintInvoice" @load-draft="handleLoadDraftFromManagement"
+				@delete-draft="handleDeleteDraft" @refresh-history="loadInvoiceHistoryData" />
 
 			<!-- Invoice Detail Dialog -->
-			<InvoiceDetailDialog
-				v-model="showInvoiceDetail"
-				:invoice-name="selectedInvoiceForView"
-				:pos-profile="shiftStore.profileName"
-				:currency="shiftStore.profileCurrency"
-				@print-invoice="handlePrintInvoice"
-			/>
+			<InvoiceDetailDialog v-model="showInvoiceDetail" :invoice-name="selectedInvoiceForView"
+				:pos-profile="shiftStore.profileName" :currency="shiftStore.profileCurrency"
+				@print-invoice="handlePrintInvoice" />
 
 			<!-- Clear Cart Confirmation Dialog -->
-			<Dialog
-				v-model="uiStore.showClearCartDialog"
-				:options="{ title: __('Clear Cart?'), size: 'xs' }"
-			>
+			<Dialog v-model="uiStore.showClearCartDialog" :options="{ title: __('Clear Cart?'), size: 'xs' }">
 				<template #body-content>
 					<div class="py-3">
 						<p class="text-sm text-gray-600">
@@ -645,19 +352,10 @@
 				</template>
 				<template #actions>
 					<div class="flex gap-2 w-full">
-						<Button
-							class="flex-1"
-							variant="subtle"
-							@click="uiStore.showClearCartDialog = false"
-						>
+						<Button class="flex-1" variant="subtle" @click="uiStore.showClearCartDialog = false">
 							{{ __("Cancel") }}
 						</Button>
-						<Button
-							class="flex-1"
-							variant="solid"
-							theme="red"
-							@click="confirmClearCart"
-						>
+						<Button class="flex-1" variant="solid" theme="red" @click="confirmClearCart">
 							{{ __("Clear All") }}
 						</Button>
 					</div>
@@ -665,30 +363,17 @@
 			</Dialog>
 
 			<!-- Logout Confirmation Dialog -->
-			<Dialog
-				v-model="uiStore.showLogoutDialog"
-				:options="{ title: __('Sign Out Confirmation'), size: 'md' }"
-				:dismissable="!session.logout.loading"
-			>
+			<Dialog v-model="uiStore.showLogoutDialog" :options="{ title: __('Sign Out Confirmation'), size: 'md' }"
+				:dismissable="!session.logout.loading">
 				<template #body-content>
 					<!-- WITH SHIFT OPEN -->
 					<div v-if="shiftStore.hasOpenShift" class="px-4 py-5">
 						<div class="text-center mb-6">
 							<div
-								class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-red-100 to-red-200 shadow-md mb-4"
-							>
-								<svg
-									class="h-8 w-8 text-red-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-									/>
+								class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-red-100 to-red-200 shadow-md mb-4">
+								<svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+										d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 								</svg>
 							</div>
 							<h3 class="text-lg font-bold text-red-600 mb-2">
@@ -704,41 +389,23 @@
 						<!-- Action Buttons -->
 						<div class="space-y-3 max-w-md mx-auto">
 							<!-- Recommended Action - BLUE -->
-							<button
-								@click="logoutWithCloseShift"
-								:disabled="session.logout.loading"
-								class="w-full flex items-center justify-center px-5 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-blue-500/30 transition-[background,box-shadow,opacity,transform] duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
-							>
-								<svg
-									class="w-5 h-5 me-2"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-									/>
+							<button @click="logoutWithCloseShift" :disabled="session.logout.loading"
+								class="w-full flex items-center justify-center px-5 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-blue-500/30 transition-[background,box-shadow,opacity,transform] duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]">
+								<svg class="w-5 h-5 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+										d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
 								</svg>
 								{{ __("Close Shift & Sign Out") }}
 							</button>
 
 							<!-- Alternative Actions -->
 							<div class="grid grid-cols-2 gap-2">
-								<button
-									@click="confirmLogout"
-									:disabled="session.logout.loading"
-									class="px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold text-sm rounded-lg shadow-md hover:shadow-red-500/30 transition-[background,box-shadow,opacity] duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-								>
+								<button @click="confirmLogout" :disabled="session.logout.loading"
+									class="px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold text-sm rounded-lg shadow-md hover:shadow-red-500/30 transition-[background,box-shadow,opacity] duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
 									{{ __("Skip & Sign Out") }}
 								</button>
-								<button
-									@click="uiStore.showLogoutDialog = false"
-									:disabled="session.logout.loading"
-									class="px-4 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm rounded-lg transition-[background-color,border-color,opacity] duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 hover:border-gray-400"
-								>
+								<button @click="uiStore.showLogoutDialog = false" :disabled="session.logout.loading"
+									class="px-4 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm rounded-lg transition-[background-color,border-color,opacity] duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300 hover:border-gray-400">
 									{{ __("Cancel") }}
 								</button>
 							</div>
@@ -749,20 +416,10 @@
 					<div v-else class="px-4 py-5">
 						<div class="text-center mb-6">
 							<div
-								class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-red-100 to-red-200 shadow-md mb-4"
-							>
-								<svg
-									class="h-8 w-8 text-red-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-									/>
+								class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-red-100 to-red-200 shadow-md mb-4">
+								<svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+										d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
 								</svg>
 							</div>
 							<h3 class="text-lg font-bold text-red-600 mb-2">
@@ -774,38 +431,20 @@
 						</div>
 
 						<div class="grid grid-cols-2 gap-3 max-w-sm mx-auto">
-							<button
-								@click="uiStore.showLogoutDialog = false"
-								:disabled="session.logout.loading"
-								class="px-5 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-blue-500/30 transition-[background-color,box-shadow,opacity,transform] duration-200 disabled:opacity-50 transform hover:scale-[1.02] active:scale-[0.98]"
-							>
+							<button @click="uiStore.showLogoutDialog = false" :disabled="session.logout.loading"
+								class="px-5 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-blue-500/30 transition-[background-color,box-shadow,opacity,transform] duration-200 disabled:opacity-50 transform hover:scale-[1.02] active:scale-[0.98]">
 								{{ __("Cancel") }}
 							</button>
-							<button
-								@click="confirmLogout"
-								:disabled="session.logout.loading"
-								class="px-5 py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-red-500/30 transition-[background,box-shadow,opacity,transform] duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
-							>
+							<button @click="confirmLogout" :disabled="session.logout.loading"
+								class="px-5 py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-red-500/30 transition-[background,box-shadow,opacity,transform] duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]">
 								<span v-if="!session.logout.loading">{{ __("Sign Out") }}</span>
 								<span v-else class="flex items-center justify-center">
-									<svg
-										class="animate-spin h-5 w-5 me-2"
-										fill="none"
-										viewBox="0 0 24 24"
-									>
-										<circle
-											class="opacity-25"
-											cx="12"
-											cy="12"
-											r="10"
-											stroke="currentColor"
-											stroke-width="4"
-										></circle>
-										<path
-											class="opacity-75"
-											fill="currentColor"
-											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-										></path>
+									<svg class="animate-spin h-5 w-5 me-2" fill="none" viewBox="0 0 24 24">
+										<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+											stroke-width="4"></circle>
+										<path class="opacity-75" fill="currentColor"
+											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+										</path>
 									</svg>
 									{{ __("Signing Out...") }}
 								</span>
@@ -816,27 +455,14 @@
 			</Dialog>
 
 			<!-- Success Dialog -->
-			<Dialog
-				v-model="uiStore.showSuccessDialog"
-				:options="{ title: __('Invoice Created Successfully'), size: 'md' }"
-			>
+			<Dialog v-model="uiStore.showSuccessDialog"
+				:options="{ title: __('Invoice Created Successfully'), size: 'md' }">
 				<template #body-content>
 					<div class="text-center py-6">
-						<div
-							class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100"
-						>
-							<svg
-								class="h-6 w-6 text-green-600"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M5 13l4 4L19 7"
-								/>
+						<div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+							<svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+									d="M5 13l4 4L19 7" />
 							</svg>
 						</div>
 						<h3 class="mt-4 text-lg font-medium text-gray-900">
@@ -854,16 +480,12 @@
 						<Button variant="subtle" @click="uiStore.showSuccessDialog = false">
 							{{ __("Close") }}
 						</Button>
-						<Button
-							variant="solid"
-							theme="blue"
-							@click="
-								() => {
-									handlePrintInvoice({ name: uiStore.lastInvoiceName });
-									uiStore.showSuccessDialog = false;
-								}
-							"
-						>
+						<Button variant="solid" theme="blue" @click="
+							() => {
+								handlePrintInvoice({ name: uiStore.lastInvoiceName });
+								uiStore.showSuccessDialog = false;
+							}
+						">
 							{{ __("Print Invoice") }}
 						</Button>
 					</div>
@@ -871,34 +493,24 @@
 			</Dialog>
 
 			<!-- Error Dialog -->
-			<Dialog
-				v-model="uiStore.showErrorDialog"
-				:options="{ title: uiStore.errorDialogTitle || __('Error'), size: 'md' }"
-			>
+			<Dialog v-model="uiStore.showErrorDialog"
+				:options="{ title: uiStore.errorDialogTitle || __('Error'), size: 'md' }">
 				<template #body-content>
 					<div class="py-3">
 						<p class="text-sm text-gray-700 whitespace-pre-line">
 							{{ uiStore.errorDialogMessage || __("An unexpected error occurred.") }}
 						</p>
-						<div
-							v-if="uiStore.errorDetails"
-							class="mt-3 pt-3 border-t border-gray-200"
-						>
+						<div v-if="uiStore.errorDetails" class="mt-3 pt-3 border-t border-gray-200">
 							<p class="text-xs text-gray-500">{{ uiStore.errorDetails }}</p>
 						</div>
 					</div>
 				</template>
 				<template #actions>
 					<div class="flex justify-between items-center w-full">
-						<Button
-							v-if="
-								uiStore.errorRetryAction === 'sync' &&
-								uiStore.errorRetryActionData?.failedInvoiceId
-							"
-							variant="outline"
-							theme="red"
-							@click="handleDeleteFailedInvoice"
-						>
+						<Button v-if="
+							uiStore.errorRetryAction === 'sync' &&
+							uiStore.errorRetryActionData?.failedInvoiceId
+						" variant="outline" theme="red" @click="handleDeleteFailedInvoice">
 							{{ __("Delete Invoice") }}
 						</Button>
 						<div v-else></div>
@@ -906,11 +518,7 @@
 							<Button variant="subtle" @click="uiStore.clearError()">
 								{{ __("Close") }}
 							</Button>
-							<Button
-								v-if="uiStore.errorRetryAction"
-								variant="solid"
-								@click="handleErrorRetry"
-							>
+							<Button v-if="uiStore.errorRetryAction" variant="solid" @click="handleErrorRetry">
 								{{ __("Try Again") }}
 							</Button>
 						</div>
@@ -919,12 +527,8 @@
 			</Dialog>
 
 			<!-- Clear Cache Overlay -->
-			<ClearCacheOverlay
-				ref="clearCacheOverlayRef"
-				:show="showClearCacheDialog"
-				@cancel="showClearCacheDialog = false"
-				@confirm="confirmClearCache"
-			/>
+			<ClearCacheOverlay ref="clearCacheOverlayRef" :show="showClearCacheDialog"
+				@cancel="showClearCacheDialog = false" @confirm="confirmClearCache" />
 
 			<!-- Footer -->
 			<!-- <POSFooter /> -->
@@ -1044,8 +648,7 @@ function computeCartHash() {
 	return cartStore.invoiceItems
 		.map(
 			(i) =>
-				`${i.item_code}-${i.quantity}-${i.rate}-${i.discount_percentage || 0}-${
-					i.discount_amount || 0
+				`${i.item_code}-${i.quantity}-${i.rate}-${i.discount_percentage || 0}-${i.discount_amount || 0
 				}-${i.uom || ""}-${i.warehouse || ""}`
 		)
 		.join("|");
@@ -1207,11 +810,11 @@ onMounted(async () => {
 			showSuccess(
 				changes.tax_inclusive.new
 					? __(
-							"Prices are now tax-inclusive. This will apply to new items added to cart."
-					  )
+						"Prices are now tax-inclusive. This will apply to new items added to cart."
+					)
 					: __(
-							"Prices are now tax-exclusive. This will apply to new items added to cart."
-					  )
+						"Prices are now tax-exclusive. This will apply to new items added to cart."
+					)
 			);
 		}
 	});
@@ -1422,9 +1025,8 @@ watch(
 		// Create signature from item codes to detect catalog changes even with same count
 		const signature =
 			count > 0
-				? `${items[0]?.item_code || ""}-${items[Math.floor(count / 2)]?.item_code || ""}-${
-						items[count - 1]?.item_code || ""
-				  }`
+				? `${items[0]?.item_code || ""}-${items[Math.floor(count / 2)]?.item_code || ""}-${items[count - 1]?.item_code || ""
+				}`
 				: "";
 
 		return { count, warehouse, signature };
@@ -1470,7 +1072,7 @@ onUnmounted(() => {
 	stopResize();
 
 	// Stop periodic stock sync on unmount
-	offlineWorker.stopStockSync().catch(() => {});
+	offlineWorker.stopStockSync().catch(() => { });
 });
 
 // ============================================================================
@@ -1687,13 +1289,13 @@ function handleItemSelected(item, autoAdd = false) {
 			showError(
 				item.is_bundle
 					? __(
-							'"{0}" cannot be added to cart. Bundle is out of stock. Allow Negative Stock is disabled.',
-							[item.item_name]
-					  )
+						'"{0}" cannot be added to cart. Bundle is out of stock. Allow Negative Stock is disabled.',
+						[item.item_name]
+					)
 					: __(
-							'"{0}" cannot be added to cart. Item is out of stock. Allow Negative Stock is disabled.',
-							[item.item_name]
-					  )
+						'"{0}" cannot be added to cart. Item is out of stock. Allow Negative Stock is disabled.',
+						[item.item_name]
+					)
 			);
 			return;
 		}
