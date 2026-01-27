@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model="open" :options="{ title: __('ERPNext Reports'), size: 'sm' }">
+  <Dialog v-model="open" :options="{ title: __('Reports'), size: 'sm' }">
     <template #body-content>
       <div class="div p-4">
         <p class="text-sm text-gray-500 mb-4">{{ __('Select a report to open in ERPNext') }}</p>
