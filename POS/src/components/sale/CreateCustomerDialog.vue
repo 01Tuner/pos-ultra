@@ -18,7 +18,7 @@
 					<!-- VAT Registration Number -->
 					<div>
 						<label class="block text-start text-sm font-medium text-gray-700 mb-2">
-							{{ __("VAT Registration Number") }}
+							{{ __("VAT Registration No") }}
 						</label>
 						<Input
 							v-model="customerData.custom_vat_registration_number"
