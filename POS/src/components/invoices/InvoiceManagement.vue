@@ -51,13 +51,13 @@
 
 					<!-- Tabs Navigation -->
 					<div class="border-b border-gray-200 bg-gray-50">
-						<nav class="flex gap-2 px-6" :aria-label="__('Tabs')">
+						<nav class="flex gap-2 px-6 overflow-x-auto no-scrollbar" :aria-label="__('Tabs')">
 							<button
 								v-for="tab in tabs"
 								:key="tab.id"
 								@click="activeTab = tab.id"
 								:class="[
-									'px-4 py-3 text-sm font-semibold transition-all border-b-2 relative',
+									'px-4 py-3 text-sm font-semibold transition-all border-b-2 relative flex-shrink-0',
 									activeTab === tab.id
 										? getTabActiveClass(tab.id)
 										: 'text-gray-600 border-transparent hover:text-gray-800 hover:border-gray-300'
@@ -1039,5 +1039,12 @@ onMounted(() => {
 	max-height: 600px;
 	opacity: 1;
 	transform: translateY(0);
+}
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
 }
 </style>

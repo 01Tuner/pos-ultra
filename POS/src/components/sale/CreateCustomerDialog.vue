@@ -3,7 +3,7 @@
 		<template #body-content>
 			<div class="flex flex-col gap-6">
 				<!-- Customer Name (Required) -->
-				<div class="grid grid-cols-2 gap-4">
+				<div class="flex flex-col gap-4">
 					<div>
 						<label class="block text-start text-sm font-medium text-gray-700 mb-2">
 							{{ __("Customer Name") }} <span class="text-red-500">*</span>

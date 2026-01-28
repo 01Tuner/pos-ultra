@@ -10,7 +10,7 @@
 			<div class="fixed inset-0 flex items-center justify-center p-4 md:p-6">
 				<div class="w-full max-w-5xl max-h-[90vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
 					<!-- Header -->
-					<div class="flex items-center justify-between px-6 py-5 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+					<div class="relative flex flex-col sm:flex-row sm:items-center justify-between px-6 py-5 border-b bg-gradient-to-r from-blue-50 to-indigo-50 gap-4">
 						<div class="flex items-center gap-3">
 							<div class="p-2 bg-blue-100 rounded-lg">
 								<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -28,7 +28,7 @@
 								</p>
 							</div>
 						</div>
-						<div class="flex items-center gap-2">
+						<div class="flex items-center justify-end gap-2">
 							<Button
 								@click="loadSettings"
 								:loading="loading"
@@ -57,7 +57,7 @@
 							</Button>
 							<button
 								@click="handleClose"
-								class="p-2 hover:bg-white/50 rounded-lg transition-colors"
+								class="absolute top-2 sm:static p-2 hover:bg-white/50 rounded-lg transition-colors"
 							>
 								<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

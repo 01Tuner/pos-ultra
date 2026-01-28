@@ -677,7 +677,7 @@
 
 							<!-- Single Pay button (when no credit sale option) -->
 							<button
-								v-else-if="lastSelectedMethod && remainingAmount > 0"
+								v-else-if="lastSelectedMethod && remainingAmount > 0 && totalPaid === 0"
 								@click="addCustomPayment(lastSelectedMethod, remainingAmount)"
 								:disabled="isSubmitting"
 								:class="[
@@ -696,7 +696,7 @@
 
 							<!-- Complete Payment Button -->
 							<button
-								v-if="remainingAmount === 0 && totalPaid > 0"
+								v-if="totalPaid > 0"
 								@click="completePayment"
 								:disabled="isSubmitting"
 								:class="[
@@ -714,7 +714,7 @@
 								<svg v-else :class="mobileButtonSize.icon" fill="currentColor" viewBox="0 0 20 20">
 									<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
 								</svg>
-								<span>{{ isSubmitting ? __('Processing...') : __('Complete Payment') }}</span>
+								<span>{{ isSubmitting ? __('Processing...') : paymentButtonText }}</span>
 							</button>
 						</div>
 					</div>
