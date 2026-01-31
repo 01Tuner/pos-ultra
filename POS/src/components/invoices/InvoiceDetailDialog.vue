@@ -209,40 +209,93 @@
 				<!-- Totals Section -->
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 					<!-- Payment Info -->
-					<div v-if="invoiceData.payments && invoiceData.payments.length > 0">
-						<h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-							<svg class="w-4 h-4 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-							</svg>
-							{{ __('Payments') }}
-						</h4>
-						<div class="flex flex-col gap-2">
-							<div
-								v-for="(payment, idx) in invoiceData.payments"
-								:key="idx"
-								class="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded-lg"
-							>
-								<div class="text-start flex-1">
-									<div class="text-sm font-medium text-gray-900">{{ payment.mode_of_payment }}</div>
-									<div v-if="payment.voucher_no" class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-2">
-										<span>{{ payment.voucher_no }}</span>
-										<span v-if="payment.creation" class="inline-flex items-center">
-											<span class="w-1 h-1 rounded-full bg-gray-400 mx-1"></span>
-											{{ formatDate(payment.creation) }} {{ formatTime(payment.creation) }}
-										</span>
+					<div v-if="invoiceData.payments && invoiceData.payments.length > 0" class="flex flex-col gap-6">
+						<!-- Payments Section (Sales Invoice Vouchers) -->
+						<div v-if="paymentsList.length > 0">
+							<h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+								<svg class="w-4 h-4 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+								</svg>
+								{{ __('Payments') }}
+							</h4>
+							<div class="flex flex-col gap-2">
+								<div
+									v-for="(payment, idx) in paymentsList"
+									:key="idx"
+									class="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded-lg"
+								>
+									<div class="text-start flex-1">
+										<div class="text-sm font-medium text-gray-900">{{ payment.mode_of_payment }}</div>
+										<div v-if="payment.voucher_no" class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-2">
+											<button
+												class="font-medium transition-colors"
+											>
+												{{ payment.voucher_no }}
+											</button>
+											<span v-if="payment.creation" class="inline-flex items-center">
+												<span class="w-1 h-1 rounded-full bg-gray-400 mx-1"></span>
+												{{ formatDate(payment.creation) }} {{ formatTime(payment.creation) }}
+											</span>
+										</div>
+									</div>
+									<div class="flex items-center gap-3">
+										<div class="text-sm font-semibold text-green-700">{{ formatCurrency(payment.amount) }}</div>
+										<button
+											@click="handlePrintReceipt(payment)"
+											class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+											:title="__('Print Receipt')"
+										>
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+											</svg>
+										</button>
 									</div>
 								</div>
-								<div class="flex items-center gap-3">
-									<div class="text-sm font-semibold text-green-700">{{ formatCurrency(payment.amount) }}</div>
-									<button
-										@click="handlePrintReceipt(payment)"
-										class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-										:title="__('Print Receipt')"
-									>
-										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-										</svg>
-									</button>
+							</div>
+						</div>
+
+						<!-- Returns Section (Payment Entry Vouchers) -->
+						<div v-if="returnsList.length > 0">
+							<h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+								<svg class="w-4 h-4 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+								</svg>
+								{{ __('Returns') }}
+							</h4>
+							<div class="flex flex-col gap-2">
+								<div
+									v-for="(payment, idx) in returnsList"
+									:key="idx"
+									class="flex justify-between items-center p-3 bg-red-50 border border-red-200 rounded-lg"
+								>
+									<div class="text-start flex-1">
+										<div class="text-sm font-medium text-gray-900">{{ payment.mode_of_payment }}</div>
+										<div v-if="payment.voucher_no" class="text-[10px] text-gray-400 mt-0.5 flex items-center gap-2">
+											<button
+												@click="openDocument(payment)"
+												class="hover:text-blue-600 hover:underline cursor-pointer font-medium transition-colors"
+												:title="__('Open Document')"
+											>
+												{{ payment.voucher_no }}
+											</button>
+											<span v-if="payment.creation" class="inline-flex items-center">
+												<span class="w-1 h-1 rounded-full bg-gray-400 mx-1"></span>
+												{{ formatDate(payment.creation) }} {{ formatTime(payment.creation) }}
+											</span>
+										</div>
+									</div>
+									<div class="flex items-center gap-3">
+										<div class="text-sm font-semibold text-red-700">{{ formatCurrency(payment.amount) }}</div>
+										<button
+											@click="handlePrintReceipt(payment)"
+											class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+											:title="__('Print Receipt')"
+										>
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+											</svg>
+										</button>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -336,7 +389,7 @@ function formatCurrency(amount) {
 	return formatCurrencyUtil(Number.parseFloat(amount || 0), props.currency)
 }
 
-const emit = defineEmits(["update:modelValue", "print-invoice", "make-payment", "return-invoice"])
+const emit = defineEmits(["update:modelValue", "print-invoice", "make-payment", "return-invoice", "open-invoice"])
 
 function handlePayment() {
     if (!invoiceData.value) return
@@ -378,6 +431,16 @@ const isCreditSaleReturn = computed(() => {
 	return hasNoPayments || totalPaid < 0.01
 })
 
+const paymentsList = computed(() => {
+	if (!invoiceData.value || !invoiceData.value.payments) return []
+	return invoiceData.value.payments.filter(p => !p.voucher_type || p.voucher_type === 'Payment Entry')
+})
+
+const returnsList = computed(() => {
+	if (!invoiceData.value || !invoiceData.value.payments) return []
+	return invoiceData.value.payments.filter(p => p.voucher_type === 'Sales Invoice')
+})
+
 watch(
 	() => props.modelValue,
 	(val) => {
@@ -386,6 +449,15 @@ watch(
 			loadInvoiceDetails()
 		}
 	},
+)
+
+watch(
+	() => props.invoiceName,
+	(val) => {
+		if (val && show.value) {
+			loadInvoiceDetails()
+		}
+	}
 )
 
 watch(show, async (val) => {
@@ -442,6 +514,19 @@ async function handlePrintReceipt(payment) {
 	} catch (error) {
 		log.error("Error calling printPaymentReceipt:", error)
 	}
+}
+
+function openDocument(payment) {
+    if (!payment.voucher_type || !payment.voucher_no) return
+
+    if (payment.voucher_type === 'Sales Invoice') {
+        emit('open-invoice', payment.voucher_no)
+    } else {
+        // Convert DocType to slug (e.g., "Payment Entry" -> "payment-entry")
+        const slug = payment.voucher_type.toLowerCase().trim().replace(/\s+/g, '-')
+        const url = `/app/${slug}/${payment.voucher_no}`
+        window.open(url, '_blank')
+    }
 }
 </script>
 

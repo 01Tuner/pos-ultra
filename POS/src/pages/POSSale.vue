@@ -344,7 +344,8 @@
 			<InvoiceDetailDialog v-model="showInvoiceDetail" :invoice-name="selectedInvoiceForView"
 				:pos-profile="shiftStore.profileName" :currency="shiftStore.profileCurrency"
 				@print-invoice="handlePrintInvoice" @make-payment="handleMakePaymentFromDetail"
-				@return-invoice="handleReturnInvoiceFromDetail" />
+				@return-invoice="handleReturnInvoiceFromDetail"
+				@open-invoice="(name) => selectedInvoiceForView = name" />
 
             <!-- Invoice Payment Dialog (Generic) -->
             <PaymentDialog
