@@ -550,7 +550,7 @@
 		:pos-profile="posProfile"
 		:currency="currency"
 		:is-offline="false"
-		:allow-partial-payment="true"
+		:allow-partial-payment="settingsStore.allowPartialPayment"
 		@payment-completed="handlePaymentCompleted"
 	/>
 </template>
@@ -560,6 +560,7 @@ import InvoiceFilters from "@/components/invoices/InvoiceFilters.vue"
 import PaymentDialog from "@/components/sale/PaymentDialog.vue"
 import { useInvoiceFilters } from "@/composables/useInvoiceFilters"
 import { useInvoiceFiltersStore } from "@/stores/invoiceFilters"
+import { usePOSSettingsStore } from "@/stores/posSettings"
 import { formatCurrency as formatCurrencyUtil } from "@/utils/currency"
 import { getInvoiceStatusColor } from "@/utils/invoice"
 import { useFormatters } from "@/composables/useFormatters"
@@ -612,6 +613,7 @@ const activeTab = ref("partial")
 
 // Initialize filter store and composable
 const filterStore = useInvoiceFiltersStore()
+const settingsStore = usePOSSettingsStore()
 
 // Create a computed ref for history invoices to use with filter composable
 const historyInvoicesRef = computed(() => props.historyInvoices)

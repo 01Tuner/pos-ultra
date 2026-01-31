@@ -355,7 +355,7 @@
                 :items="selectedInvoiceForPayment?.items || []"
                 :pos-profile="shiftStore.profileName"
                 :currency="shiftStore.profileCurrency"
-                :allow-partial-payment="true"
+                :allow-partial-payment="posSettingsStore.allowPartialPayment"
                 :customer="selectedInvoiceForPayment?.customer"
                 :company="shiftStore.profileCompany"
                 @payment-completed="handleInvoicePaymentCompleted"

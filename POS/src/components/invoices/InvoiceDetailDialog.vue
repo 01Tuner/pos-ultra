@@ -58,7 +58,7 @@
                             <!-- Action Buttons -->
                             <div class="flex gap-2">
                                 <Button
-                                    v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled'"
+                                    v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled' && allowReturn"
                                     variant="subtle"
                                     theme="gray"
                                     size="sm"
@@ -371,6 +371,10 @@ import { getInvoiceStatusColor } from "@/utils/invoice"
 import { logger } from "@/utils/logger"
 import { Button, Dialog, call } from "frappe-ui"
 import { ref, watch, nextTick, computed } from "vue"
+import { usePOSSettingsStore } from "@/stores/posSettings"
+
+const settingsStore = usePOSSettingsStore()
+const allowReturn = computed(() => settingsStore.allowReturn)
 
 const log = logger.create('InvoiceDetailDialog')
 const { formatDate, formatTime } = useFormatters()
