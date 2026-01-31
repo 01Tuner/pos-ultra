@@ -122,6 +122,11 @@ def get_pos_settings(pos_profile):
 		frappe.db.get_single_value("Stock Settings", "allow_negative_stock") or 0
 	)
 
+	# Inject Allow Rate Change from POS Profile
+	settings["allow_user_to_edit_rate"] = cint(
+		frappe.db.get_value("POS Profile", pos_profile, "allow_rate_change") or 0
+	)
+
 	return settings
 
 

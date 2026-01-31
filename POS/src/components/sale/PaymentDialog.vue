@@ -1868,6 +1868,7 @@ function addCreditAccountPayment() {
 		is_credit_sale: true,  // Mark as credit sale
 		paid_amount: 0,
 		outstanding_amount: props.grandTotal,
+		delivery_date: isSalesOrder.value ? deliveryDate.value : null,
 	}
 
 	log.debug('[PaymentDialog] Emitting credit sale payment-completed:', paymentData)

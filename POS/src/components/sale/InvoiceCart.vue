@@ -1830,6 +1830,7 @@ async function handleUpdateItem(updatedItem) {
 	// Use store method to update item, passing original UOM to identify correct item
 	await cartStore.updateItemDetails(updatedItem.item_code, updatedItem, originalUom);
 	// Also emit for parent component compatibility
+	// Also emit for parent component compatibility
 	emit("edit-item", updatedItem);
 }
 

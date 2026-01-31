@@ -721,7 +721,7 @@
 import { useOffline } from "@/composables/useOffline"
 import { useToast } from "@/composables/useToast"
 import { getPaymentIcon } from "@/utils/payment"
-import { formatCurrency as formatCurrencyUtil } from "@/utils/currency"
+import { formatCurrency as formatCurrencyUtil, round2 } from "@/utils/currency"
 import { getInvoiceStatusColor } from "@/utils/invoice"
 import { Button, Dialog, FeatherIcon, createResource } from "frappe-ui"
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue"
@@ -982,8 +982,11 @@ const createReturnResource = createResource({
 				mode_of_payment: payment.mode_of_payment,
 				amount: -Math.abs(payment.amount),
 			})),
+			// Copy taxes from the prepared return document
+			taxes: baseDoc.taxes || [],
 			remarks:
 				returnReason.value || __('Return against {0}', [originalInvoice.value.name]),
+			custom_return_reason: returnReason.value || baseDoc.custom_return_reason,
 		}
 
 		// Return in the correct format: invoice as JSON string
@@ -1082,9 +1085,44 @@ const filteredReturnItems = computed(() => {
 
 const hasOpenShift = computed(() => Boolean(props.posOpeningShift))
 
-const returnTotal = computed(() =>
-	selectedItems.value.reduce((sum, item) => sum + item.return_qty * item.rate, 0)
-)
+const taxRatio = computed(() => {
+	if (!preparedReturnDoc.value) return 1
+	const netTotal = Number(preparedReturnDoc.value.net_total) || 0
+	const grandTotal = Number(preparedReturnDoc.value.grand_total) || 0
+	if (netTotal === 0) return 1
+	return grandTotal / netTotal
+})
+
+const isInclusiveTax = computed(() => {
+	// Check if any tax is included in print rate
+	if (!preparedReturnDoc.value?.taxes) return false
+	return preparedReturnDoc.value.taxes.some(t => t.included_in_print_rate)
+})
+
+const returnTotal = computed(() => {
+	// Check if all available items are selected for full return
+	const isFullReturn = returnItems.value.length > 0 &&
+		returnItems.value.every(item => item.selected && item.return_qty === item.quantity)
+
+	if (isFullReturn && preparedReturnDoc.value) {
+		return Math.abs(Number(preparedReturnDoc.value.grand_total) || 0)
+	}
+
+	const subtotal = selectedItems.value.reduce((sum, item) => {
+		// Use rate directly as it has been corrected by backend (Inclusive or Net based on context)
+		// We fallback to net_rate only if rate is missing (unlikely)
+		const rate = Number(item.rate) || Number(item.net_rate) || 0
+		return sum + item.return_qty * rate
+	}, 0)
+	
+	// If Inclusive Tax: subtotal IS the grand total (because rate is inclusive)
+	// If Exclusive Tax: subtotal is Net, so we multiply by taxRatio to get Grand Total
+	if (isInclusiveTax.value) {
+		return round2(subtotal)
+	}
+
+	return round2(subtotal * taxRatio.value)
+})
 
 const totalPaymentAmount = computed(() =>
 	refundPayments.value.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0)
@@ -1564,6 +1602,11 @@ function highlightSearchMatch(text, searchTerm) {
 	const regex = new RegExp(`(${escaped})`, 'gi')
 	return text.replace(regex, '<mark class="search-highlight">$1</mark>')
 }
+
+defineExpose({
+    openReturnModal,
+    checkValidityAndOpenModal
+})
 </script>
 
 <style scoped>

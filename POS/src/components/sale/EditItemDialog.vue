@@ -133,8 +133,16 @@
 																type="number"
 																min="0"
 																step="0.01"
-																readonly
-																class="w-full h-7 border border-gray-300 rounded-lg ps-12 pe-3 text-sm font-semibold bg-gray-50 cursor-not-allowed"
+																:readonly="!settingsStore.allowEditRate"
+																:class="[
+																	'w-full h-7 border border-gray-300 rounded-lg ps-12 pe-3 text-sm font-semibold',
+																	settingsStore.allowEditRate
+																		? 'bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+																		: 'bg-gray-50 cursor-not-allowed'
+																]"
+																@input="calculateTotals"
+																@blur="calculateTotals"
+																@keydown.enter="$event.target.blur()"
 															/>
 														</div>
 													</div>
@@ -583,6 +591,7 @@ function updateItem() {
 		quantity: localQuantity.value,
 		uom: localUom.value,
 		rate: localRate.value,
+		price_list_rate: localRate.value, // Update price list rate to persist manual change
 		warehouse: localWarehouse.value,
 		discount_percentage:
 			discountType.value === "percentage" ? discountValue.value : 0,

@@ -47,14 +47,57 @@
 								</div>
 							</div>
 						</div>
-						<div class="text-start sm:text-end">
-							<div class="text-xs text-gray-500 mb-1">{{ __('Grand Total') }}</div>
-							<div class="text-xl md:text-2xl font-bold text-indigo-600">
-								{{ formatCurrency(invoiceData.grand_total) }}
+					</div>
+						<div class="flex flex-col sm:items-end gap-3">
+							<div class="text-start sm:text-end">
+								<div class="text-xs text-gray-500 mb-1">{{ __('Grand Total') }}</div>
+								<div class="text-xl md:text-2xl font-bold text-indigo-600">
+									{{ formatCurrency(invoiceData.grand_total) }}
+								</div>
 							</div>
+                            <!-- Action Buttons -->
+                            <div class="flex gap-2">
+                                <Button
+                                    v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled'"
+                                    variant="subtle"
+                                    theme="gray"
+                                    size="sm"
+                                    @click="handleReturn"
+                                    class="shadow-sm border border-gray-200"
+                                >
+                                    <template #prefix>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                        </svg>
+                                    </template>
+                                    {{ __('Return') }}
+                                </Button>
+                                <Button
+                                    v-if="!invoiceData.is_return && invoiceData.outstanding_amount > 0 && invoiceData.status !== 'Cancelled'"
+                                    variant="solid"
+                                    theme="blue"
+                                    size="sm"
+                                    @click="handlePayment"
+                                    class="shadow-md hover:shadow-lg transition-all"
+                                >
+                                    <template #prefix>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                    </template>
+                                    {{ __('Payment') }}
+                                </Button>
+								<Button size="sm" @click="handlePrint">
+									<template #prefix>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+										</svg>
+									</template>
+									{{ __('Print') }}
+								</Button>
+                            </div>
 						</div>
 					</div>
-				</div>
 
 				<!-- Credit Sale Return Notice -->
 				<div v-if="invoiceData.is_return && isCreditSaleReturn" class="bg-gradient-to-r rtl:bg-gradient-to-l from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
@@ -258,17 +301,9 @@
 			</div>
 		</template>
 		<template #actions>
-			<div class="flex justify-between items-center w-full">
+			<div class="flex justify-end w-full">
 				<Button variant="subtle" @click="show = false">
 					{{ __('Close') }}
-				</Button>
-				<Button @click="handlePrint">
-					<template #prefix>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-						</svg>
-					</template>
-					{{ __('Print') }}
 				</Button>
 			</div>
 		</template>
@@ -301,7 +336,19 @@ function formatCurrency(amount) {
 	return formatCurrencyUtil(Number.parseFloat(amount || 0), props.currency)
 }
 
-const emit = defineEmits(["update:modelValue", "print-invoice"])
+const emit = defineEmits(["update:modelValue", "print-invoice", "make-payment", "return-invoice"])
+
+function handlePayment() {
+    if (!invoiceData.value) return
+    emit("make-payment", invoiceData.value)
+    show.value = false
+}
+
+function handleReturn() {
+    if (!invoiceData.value) return
+    emit("return-invoice", invoiceData.value)
+    show.value = false
+}
 
 const show = ref(props.modelValue)
 const loading = ref(false)

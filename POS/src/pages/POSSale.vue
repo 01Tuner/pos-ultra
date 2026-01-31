@@ -261,7 +261,7 @@
 				@load-draft="handleLoadDraft" @drafts-updated="draftsStore.updateDraftsCount" />
 
 			<!-- Return Invoice Dialog -->
-			<ReturnInvoiceDialog v-model="uiStore.showReturnDialog" :pos-profile="shiftStore.profileName"
+			<ReturnInvoiceDialog ref="returnDialogRef" v-model="uiStore.showReturnDialog" :pos-profile="shiftStore.profileName"
 				:pos-opening-shift="shiftStore.currentShift?.name" :currency="shiftStore.profileCurrency"
 				@return-created="handleReturnCreated" />
 
@@ -336,10 +336,29 @@
 				@print-invoice="handlePrintInvoice" @load-draft="handleLoadDraftFromManagement"
 				@delete-draft="handleDeleteDraft" @refresh-history="loadInvoiceHistoryData" />
 
+			<!-- Sales Order Management -->
+			<SalesOrderManagement v-model="showSalesOrderManagement" :pos-profile="shiftStore.profileName"
+				:currency="shiftStore.profileCurrency" />
+
 			<!-- Invoice Detail Dialog -->
 			<InvoiceDetailDialog v-model="showInvoiceDetail" :invoice-name="selectedInvoiceForView"
 				:pos-profile="shiftStore.profileName" :currency="shiftStore.profileCurrency"
-				@print-invoice="handlePrintInvoice" />
+				@print-invoice="handlePrintInvoice" @make-payment="handleMakePaymentFromDetail"
+				@return-invoice="handleReturnInvoiceFromDetail" />
+
+            <!-- Invoice Payment Dialog (Generic) -->
+            <PaymentDialog
+                v-model="showInvoicePaymentDialog"
+                :grand-total="selectedInvoiceForPayment?.outstanding_amount || 0"
+                :subtotal="selectedInvoiceForPayment?.grand_total || 0"
+                :items="selectedInvoiceForPayment?.items || []"
+                :pos-profile="shiftStore.profileName"
+                :currency="shiftStore.profileCurrency"
+                :allow-partial-payment="true"
+                :customer="selectedInvoiceForPayment?.customer"
+                :company="shiftStore.profileCompany"
+                @payment-completed="handleInvoicePaymentCompleted"
+            />
 
 			<!-- Clear Cart Confirmation Dialog -->
 			<Dialog v-model="uiStore.showClearCartDialog" :options="{ title: __('Clear Cart?'), size: 'xs' }">
@@ -561,6 +580,7 @@ import ReturnInvoiceDialog from "@/components/sale/ReturnInvoiceDialog.vue";
 import WarehouseAvailabilityDialog from "@/components/sale/WarehouseAvailabilityDialog.vue";
 import POSSettings from "@/components/settings/POSSettings.vue";
 import InvoiceManagement from "@/components/invoices/InvoiceManagement.vue";
+import SalesOrderManagement from "@/components/sales_orders/SalesOrderManagement.vue";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog.vue";
 import ReportsDialog from "@/components/sale/ReportsDialog.vue";
 import { useRealtimeStock } from "@/composables/useRealtimeStock";
@@ -666,10 +686,65 @@ const showStockLookup = ref(false);
 // Invoice Management dialog
 const showInvoiceManagement = ref(false);
 
+// Sales Order Management dialog
+const showSalesOrderManagement = ref(false);
+
 // Invoice Detail dialog
 const showInvoiceDetail = ref(false);
 const showReportsDialog = ref(false);
 const selectedInvoiceForView = ref(null);
+
+// Indirect payment and return refs
+const showInvoicePaymentDialog = ref(false);
+const selectedInvoiceForPayment = ref(null);
+const returnDialogRef = ref(null);
+
+async function handleMakePaymentFromDetail(invoice) {
+    try {
+        // Fetch full invoice details including items for the payment dialog
+        // This mirrors logic in InvoiceManagement.vue
+        const details = await call("pos_next.api.partial_payments.get_partial_payment_details", {
+            invoice_name: invoice.name,
+        });
+        selectedInvoiceForPayment.value = details;
+        showInvoicePaymentDialog.value = true;
+    } catch (error) {
+        console.error("Error loading invoice details for payment:", error);
+        // Fallback to basic invoice data if fetch fails
+        selectedInvoiceForPayment.value = invoice;
+        showInvoicePaymentDialog.value = true;
+    }
+}
+
+function handleReturnInvoiceFromDetail(invoice) {
+	if (returnDialogRef.value) {
+		returnDialogRef.value.openReturnModal(invoice);
+	}
+}
+
+async function handleInvoicePaymentCompleted(paymentData) {
+	try {
+        if (!selectedInvoiceForPayment.value) return;
+
+		await call("pos_next.api.partial_payments.add_payment_to_partial_invoice", {
+			invoice_name: selectedInvoiceForPayment.value.name,
+			payments: paymentData.payments,
+			delivery_date: paymentData.delivery_date
+		});
+
+		showSuccess(__("Payment added successfully"));
+		showInvoicePaymentDialog.value = false;
+        
+        // Refresh data
+        loadInvoiceHistoryData();
+        // Close detail view as state changed
+        showInvoiceDetail.value = false;
+
+	} catch (error) {
+		showError(error.message || __("Failed to add payment"));
+        console.error(error);
+	}
+}
 
 // Invoice history data (used by InvoiceManagement component)
 const invoiceHistoryData = ref([]);
@@ -2097,6 +2172,8 @@ function handleManagementMenuClick(menuItem) {
 		showPromotionManagement.value = true;
 	} else if (menuItem === "settings") {
 		showPOSSettings.value = true;
+	} else if (menuItem === "sales_orders") {
+		showSalesOrderManagement.value = true;
 	} else if (menuItem === "invoices") {
 		// Load invoice history data before showing
 		loadInvoiceHistoryData();

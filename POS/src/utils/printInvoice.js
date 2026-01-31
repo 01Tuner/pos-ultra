@@ -550,3 +550,38 @@ export async function printPaymentReceipt(paymentData) {
 		throw error
 	}
 }
+/**
+* Print Sales Order by name
+* @param {string} orderName - The name of the sales order
+*/
+export async function printSalesOrderByName(orderName) {
+	try {
+		if (!orderName) {
+			throw new Error("Sales Order name is required")
+		}
+
+		// Build URL exactly as requested:
+		// /printview?doctype=Sales%20Order&name=NAME&trigger_print=1&no_letterhead=0
+		const params = new URLSearchParams({
+			doctype: "Sales Order",
+			name: orderName,
+			trigger_print: 1,
+			no_letterhead: 0,
+			_t: Date.now(), // Cache buster
+		})
+
+		const printUrl = `/printview?${params.toString()}`
+		const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
+
+		if (!printWindow) {
+			throw new Error(
+				"Failed to open print window. Please check your popup blocker settings.",
+			)
+		}
+
+		return true
+	} catch (error) {
+		log.error("Error printing Sales Order:", error)
+		throw error
+	}
+}

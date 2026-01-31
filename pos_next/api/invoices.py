@@ -1720,6 +1720,15 @@ def prepare_return_invoice(invoice_name, pos_opening_shift=None):
     return_doc.is_pos = invoice_info.is_pos
     return_doc.pos_profile = invoice_info.pos_profile
 
+    # Calculate taxes and totals to ensure item_tax_amount is populated
+    # This is required for correct inclusive rate reconstruction
+    return_doc.set_missing_values()
+    return_doc.calculate_taxes_and_totals()
+
+    # Set custom_return_reason if available
+    if return_doc.meta.has_field("custom_return_reason"):
+        return_doc.custom_return_reason = "Return of goods"
+    
     # Aggregate quantities already returned from previous return invoices
     ret_si = frappe.qb.DocType("Sales Invoice")
     ret_item = frappe.qb.DocType("Sales Invoice Item")
@@ -1786,12 +1795,30 @@ def prepare_return_invoice(invoice_name, pos_opening_shift=None):
             # Set qty to negative of remaining (for return)
             item_copy["qty"] = -remaining_qty
 
+            # Determine if we should use net_rate (Exclusive) or net_rate + tax (Inclusive)
+            # Check if the invoice has inclusive taxes
+            is_inclusive = any(cint(t.included_in_print_rate) for t in return_doc.get("taxes") or [])
+
             # Use net_rate for returns to ensure customer gets refund based on actual paid price
             # net_rate accounts for invoice-level discounts (coupons, additional discounts)
-            # while rate only reflects item-level discounts
-            item_copy["rate"] = flt(item.get("net_rate") or item.get("rate"))
+            base_rate = flt(item.get("net_rate") or item.get("rate"))
 
-            # Recalculate amount based on net_rate
+            if is_inclusive:
+                # If strictly inclusive, we must return the Inclusive Rate (Net + Tax)
+                # item_tax_amount is the total tax for the line (use tax_amount as fallback)
+                total_tax = flt(item.get("item_tax_amount") or item.get("tax_amount"))
+                # qty in return_doc is negative (full return qty)
+                qty = abs(flt(item.get("qty"))) or 1.0
+                
+                # FIXED: Use absolute value of tax to ensure we ADD it to the base rate
+                # total_tax is negative for return items, so we need abs()
+                unit_tax = abs(total_tax) / qty
+                item_copy["rate"] = flt(base_rate + unit_tax, 2)
+            else:
+                # For exclusive tax, net_rate is the correct basis (tax added on top)
+                item_copy["rate"] = base_rate
+
+            # Recalculate amount based on the corrected rate
             item_copy["amount"] = item_copy["rate"] * item_copy["qty"]
 
             updated_items.append(item_copy)
