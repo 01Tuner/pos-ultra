@@ -82,7 +82,7 @@
 			<div v-if="shiftStore.hasOpenShift" class="flex-1 flex overflow-hidden relative"
 				style="max-height: calc(100vh - 60px - var(--header-height, 60px))">
 				<!-- Icon-Only Management Slider - Always Visible -->
-				<ManagementSlider @menu-clicked="handleManagementMenuClick" />
+				<ManagementSlider :active-tab="currentActiveManagementTab" @menu-clicked="handleManagementMenuClick" />
 
 				<!-- Main Content Container -->
 				<div ref="containerRef" class="flex-1 flex flex-col xl:flex-row overflow-hidden relative pb-16 xl:pb-0">
@@ -340,6 +340,10 @@
 			<SalesOrderManagement v-model="showSalesOrderManagement" :pos-profile="shiftStore.profileName"
 				:currency="shiftStore.profileCurrency" />
 
+			<!-- Delivery Note Management -->
+			<DeliveryNoteManagement v-model="showDeliveryNoteManagement" :pos-profile="shiftStore.profileName"
+				:currency="shiftStore.profileCurrency" />
+
 			<!-- Invoice Detail Dialog -->
 			<InvoiceDetailDialog v-model="showInvoiceDetail" :invoice-name="selectedInvoiceForView"
 				:pos-profile="shiftStore.profileName" :currency="shiftStore.profileCurrency"
@@ -582,6 +586,7 @@ import WarehouseAvailabilityDialog from "@/components/sale/WarehouseAvailability
 import POSSettings from "@/components/settings/POSSettings.vue";
 import InvoiceManagement from "@/components/invoices/InvoiceManagement.vue";
 import SalesOrderManagement from "@/components/sales_orders/SalesOrderManagement.vue";
+import DeliveryNoteManagement from "@/components/delivery_notes/DeliveryNoteManagement.vue";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog.vue";
 import ReportsDialog from "@/components/sale/ReportsDialog.vue";
 import { useRealtimeStock } from "@/composables/useRealtimeStock";
@@ -690,10 +695,24 @@ const showInvoiceManagement = ref(false);
 // Sales Order Management dialog
 const showSalesOrderManagement = ref(false);
 
+// Delivery Note Management dialog
+const showDeliveryNoteManagement = ref(false);
+
 // Invoice Detail dialog
 const showInvoiceDetail = ref(false);
 const showReportsDialog = ref(false);
 const selectedInvoiceForView = ref(null);
+
+const currentActiveManagementTab = computed(() => {
+    if (showSalesOrderManagement.value) return 'sales_orders';
+    if (showDeliveryNoteManagement.value) return 'delivery_notes';
+    if (showInvoiceManagement.value) return 'invoices';
+    if (showPOSSettings.value) return 'settings';
+    if (showPromotionManagement.value) return 'promotions';
+    if (showStockLookup.value) return 'products';
+    if (showReportsDialog.value) return 'reports';
+    return '';
+});
 
 // Indirect payment and return refs
 const showInvoicePaymentDialog = ref(false);
@@ -2175,6 +2194,8 @@ function handleManagementMenuClick(menuItem) {
 		showPOSSettings.value = true;
 	} else if (menuItem === "sales_orders") {
 		showSalesOrderManagement.value = true;
+	} else if (menuItem === "delivery_notes") {
+		showDeliveryNoteManagement.value = true;
 	} else if (menuItem === "invoices") {
 		// Load invoice history data before showing
 		loadInvoiceHistoryData();

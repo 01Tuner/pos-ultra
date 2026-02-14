@@ -103,3 +103,22 @@ def cancel_sales_order(name):
     
     doc.cancel()
     return {"status": "cancelled"}
+
+@frappe.whitelist()
+def make_invoice_from_sales_order(source_name):
+    """Return mapped Sales Invoice doc from Sales Order without inserting."""
+    from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
+    doc = make_sales_invoice(source_name)
+    return doc.as_dict()
+
+@frappe.whitelist()
+def create_invoice(doc):
+    """Create a Sales Invoice from a dict (after user edits in the form)."""
+    if isinstance(doc, str):
+        import json
+        doc = json.loads(doc)
+
+    si = frappe.get_doc(doc)
+    si.insert()
+    si.submit()
+    return si.name

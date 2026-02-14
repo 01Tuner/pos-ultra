@@ -58,6 +58,21 @@
                             <!-- Action Buttons -->
                             <div class="flex gap-2">
                                 <Button
+                                    v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled' && invoiceData.docstatus === 1"
+                                    variant="subtle"
+                                    theme="gray"
+                                    size="sm"
+                                    @click="handleCreateDeliveryNote"
+                                    class="shadow-sm border border-gray-200"
+                                >
+                                    <template #prefix>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                                        </svg>
+                                    </template>
+                                    {{ __('Create Delivery Note') }}
+                                </Button>
+                                <Button
                                     v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled' && allowReturn"
                                     variant="subtle"
                                     theme="gray"
@@ -360,6 +375,11 @@
 				</Button>
 			</div>
 		</template>
+        <DeliveryNoteForm
+            v-if="showDeliveryNoteForm"
+            v-model="showDeliveryNoteForm"
+            :source-doc="deliveryNoteSource"
+        />
 	</Dialog>
 </template>
 
@@ -372,6 +392,7 @@ import { logger } from "@/utils/logger"
 import { Button, Dialog, call } from "frappe-ui"
 import { ref, watch, nextTick, computed } from "vue"
 import { usePOSSettingsStore } from "@/stores/posSettings"
+import DeliveryNoteForm from "@/components/delivery_notes/DeliveryNoteForm.vue"
 
 const settingsStore = usePOSSettingsStore()
 const allowReturn = computed(() => settingsStore.allowReturn)
@@ -410,6 +431,9 @@ function handleReturn() {
 const show = ref(props.modelValue)
 const loading = ref(false)
 const invoiceData = ref(null)
+
+const showDeliveryNoteForm = ref(false)
+const deliveryNoteSource = ref(null)
 
 // Computed: Check if this is a credit sale (Pay on Account - no payments, full outstanding)
 const isCreditSale = computed(() => {
@@ -518,6 +542,19 @@ async function handlePrintReceipt(payment) {
 	} catch (error) {
 		log.error("Error calling printPaymentReceipt:", error)
 	}
+}
+
+async function handleCreateDeliveryNote() {
+    if (!invoiceData.value) return
+    try {
+        const mappedDoc = await call("pos_next.api.delivery_notes.make_delivery_note_from_invoice", {
+            source_name: invoiceData.value.name
+        })
+        deliveryNoteSource.value = mappedDoc
+        showDeliveryNoteForm.value = true
+    } catch (error) {
+        showError(error.message || __("Failed to prepare delivery note"))
+    }
 }
 
 function openDocument(payment) {

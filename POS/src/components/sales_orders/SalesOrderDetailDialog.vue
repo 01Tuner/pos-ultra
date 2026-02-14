@@ -1,4 +1,5 @@
 <template>
+	<div>
 	<Dialog
 		v-model="show"
 		:options="{ title: __('Sales Order Details'), size: '5xl' }"
@@ -40,10 +41,34 @@
 								</div>
 							</div>
 						</div>
-						<div class="text-start sm:text-end">
-							<div class="text-xs text-gray-500 mb-1">{{ __('Grand Total') }}</div>
-							<div class="text-xl md:text-2xl font-bold text-blue-600">
-								{{ formatCurrency(orderData.grand_total) }}
+						<div class="flex flex-col sm:items-end gap-3">
+                            <div class="flex gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="subtle"
+                                    @click="handlePrint"
+                                >
+                                    <template #prefix>
+                                        <FeatherIcon name="printer" class="w-4 h-4" />
+                                    </template>
+                                    {{ __('Print') }}
+                                </Button>
+                                <Button
+                                    v-if="orderData && canCancel(orderData)"
+                                    size="sm"
+                                    theme="red"
+                                    variant="subtle"
+                                    :loading="cancelling"
+                                    @click="handleCancel"
+                                >
+                                    {{ __('Cancel') }}
+                                </Button>
+                            </div>
+							<div class="text-start sm:text-end">
+								<div class="text-xs text-gray-500 mb-1">{{ __('Grand Total') }}</div>
+								<div class="text-xl md:text-2xl font-bold text-blue-600">
+									{{ formatCurrency(orderData.grand_total) }}
+								</div>
 							</div>
 						</div>
 					</div>
@@ -146,36 +171,51 @@
 					{{ __('Close') }}
 				</Button>
 				<div class="flex gap-2">
-                    <Button
-                        v-if="orderData && canCancel(orderData)"
-                        theme="red"
+                    <Button 
+                        v-if="orderData && orderData.docstatus === 1 && orderData.status !== 'Completed' && orderData.status !== 'Cancelled'"
                         variant="subtle"
-                        :loading="cancelling"
-                        @click="handleCancel"
+                        @click="handleCreateInvoice"
                     >
-                        {{ __('Cancel Order') }}
+                        <template #prefix>
+                            <FeatherIcon name="file-text" class="w-4 h-4" />
+                        </template>
+                        {{ __('Create Invoice') }}
                     </Button>
-					<Button @click="handlePrint">
-						<template #prefix>
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-							</svg>
-						</template>
-						{{ __('Print') }}
-					</Button>
+                    <Button 
+                        v-if="orderData && orderData.docstatus === 1 && orderData.status !== 'Completed' && orderData.status !== 'Cancelled'"
+                        variant="solid"
+                        @click="handleCreateDeliveryNote"
+                    >
+                        <template #prefix>
+                            <FeatherIcon name="truck" class="w-4 h-4" />
+                        </template>
+                        {{ __('Create Delivery Note') }}
+                    </Button>
 				</div>
 			</div>
 		</template>
 	</Dialog>
+
+	<DeliveryNoteForm
+		v-if="showDeliveryNoteForm"
+		v-model="showDeliveryNoteForm"
+		:source-doc="deliveryNoteSource"
+		@created="loadOrderDetails"
+	/>
+	</div>
 </template>
 
 <script setup>
 import { useFormatters } from "@/composables/useFormatters"
 import { formatCurrency as formatCurrencyUtil } from "@/utils/currency"
 import { logger } from "@/utils/logger"
-import { Button, Dialog, call } from "frappe-ui"
-import { ref, watch, nextTick } from "vue"
+import { Button, Dialog, call, FeatherIcon } from "frappe-ui"
+import { ref, watch } from "vue"
 import { useToast } from "@/composables/useToast"
+import DeliveryNoteForm from "@/components/delivery_notes/DeliveryNoteForm.vue"
+import { usePOSCartStore } from "@/stores/posCart"
+
+const cartStore = usePOSCartStore()
 
 const log = logger.create('SalesOrderDetailDialog')
 const { formatDate, formatTime } = useFormatters()
@@ -195,12 +235,17 @@ function formatCurrency(amount) {
 	return formatCurrencyUtil(Number.parseFloat(amount || 0), props.currency)
 }
 
-const emit = defineEmits(["update:modelValue", "print-order", "order-cancelled"])
+const emit = defineEmits(["update:modelValue", "print-order", "order-cancelled", "invoice-created"])
 
 const show = ref(props.modelValue)
 const loading = ref(false)
 const orderData = ref(null)
 const cancelling = ref(false)
+
+const showDeliveryNoteForm = ref(false)
+const deliveryNoteSource = ref(null)
+
+
 
 watch(
 	() => props.modelValue,
@@ -275,6 +320,66 @@ async function handleCancel() {
          showError(error.message || __("Failed to cancel sales order"))
     } finally {
         cancelling.value = false
+    }
+}
+async function handleCreateInvoice() {
+    if (!orderData.value) return
+    try {
+        const mappedDoc = await call("pos_next.api.sales_orders.make_invoice_from_sales_order", {
+            source_name: orderData.value.name
+        })
+        
+        // Clear existing cart
+        cartStore.clearCart()
+
+        // Set customer
+        if (mappedDoc.customer) {
+            cartStore.setCustomer({
+                name: mappedDoc.customer,
+                customer_name: mappedDoc.customer_name || mappedDoc.customer
+            })
+        }
+
+        // Add items to cart
+        if (mappedDoc.items && mappedDoc.items.length) {
+            mappedDoc.items.forEach(item => {
+                cartStore.addItem({
+                    item_code: item.item_code,
+                    item_name: item.item_name,
+                    description: item.description,
+                    uom: item.uom,
+                    rate: item.rate,
+                    price_list_rate: item.price_list_rate || item.rate,
+                    is_stock_item: item.is_stock_item,
+                    stock_uom: item.stock_uom,
+                    conversion_factor: item.conversion_factor,
+                    item_group: item.item_group,
+                    description: item.description,
+                    discount_percentage: item.discount_percentage,
+                    discount_amount: item.discount_amount
+                }, item.qty)
+            })
+        }
+
+        showSuccess(__("Invoice created from Sales Order"))
+        emit("invoice-created")
+        show.value = false
+
+    } catch (error) {
+        showError(error.message || __("Failed to prepare invoice"))
+    }
+}
+
+async function handleCreateDeliveryNote() {
+    if (!orderData.value) return
+    try {
+        const mappedDoc = await call("pos_next.api.delivery_notes.make_delivery_note_from_sales_order", {
+            source_name: orderData.value.name
+        })
+        deliveryNoteSource.value = mappedDoc
+        showDeliveryNoteForm.value = true
+    } catch (error) {
+        showError(error.message || __("Failed to prepare delivery note"))
     }
 }
 </script>

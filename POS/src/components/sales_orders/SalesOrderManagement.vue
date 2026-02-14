@@ -140,6 +140,7 @@
         :currency="currency"
         @print-order="handlePrintOrder"
         @order-cancelled="handleOrderCancelled"
+		@invoice-created="handleClose"
     />
 
 	<!-- Payment Dialog -->
@@ -213,6 +214,7 @@ watch(show, (val) => {
 // Methods
 function handleClose() {
 	show.value = false;
+    showDetails.value = false;
 }
 
 function formatCurrency(amount, currency) {
