@@ -2,7 +2,7 @@
 	<!-- Icon-Only Management Bar - Sidebar on Desktop, Fixed Footer on Mobile -->
 	<div
 		class="fixed bottom-0 left-0 right-0 z-[110] h-16 bg-white border-t border-gray-200 flex flex-row items-center justify-around xl:justify-start px-2 xl:static xl:h-full xl:w-16 xl:flex-shrink-0 xl:border-t-0 xl:border-e xl:flex-col xl:py-4 xl:gap-2 xl:shadow-none shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-		<!-- Dashboard (Hidden for now)
+		<!-- Dashboard -->
 		<button
 			@click="handleMenuClick('dashboard')"
 			:class="[
@@ -18,7 +18,7 @@
 				{{ __('Dashboard') }}
 			</div>
 		</button>
-		-->
+
 
 		<!-- Promotions -->
 		<button @click="handleMenuClick('promotions')" :class="[

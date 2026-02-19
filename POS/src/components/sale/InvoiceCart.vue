@@ -124,9 +124,26 @@
 							</div>
 						</div>
 
+						<!-- Delivery Note Indicator -->
+						<div
+							v-if="cartStore.isDeliveryNoteMode"
+							class="flex items-center justify-center bg-orange-50 border border-orange-200 rounded-xl px-3 py-1.5 shadow-sm flex-shrink-0"
+						>
+							<span class="text-xs font-bold text-orange-700">{{ __("Delivery Note") }}</span>
+							<button 
+								@click="cartStore.setTargetDoctype('Sales Invoice')" 
+								class="ms-2 text-orange-500 hover:text-orange-700 p-0.5 rounded hover:bg-orange-100 transition-colors"
+								:title="__('Cancel Delivery Note Mode')"
+							>
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+								</svg>
+							</button>
+						</div>
+
 						<!-- Document Type Card -->
 						<div
-							v-if="settingsStore.allowSalesOrder"
+							v-else-if="settingsStore.allowSalesOrder"
 							class="flex items-center bg-white border border-gray-200 rounded-xl p-1.5 shadow-sm flex-shrink-0"
 						>
 							<div class="flex items-center bg-gray-100 rounded-lg p-0.5">
@@ -231,9 +248,26 @@
 							</svg>
 						</button>
 
+						<!-- Delivery Note Indicator -->
+						<div
+							v-if="cartStore.isDeliveryNoteMode"
+							class="flex items-center justify-center bg-orange-50 border border-orange-200 rounded-xl px-3 h-10 shadow-sm flex-shrink-0"
+						>
+							<span class="text-xs font-bold text-orange-700">{{ __("Delivery Note") }}</span>
+							<button 
+								@click="cartStore.setTargetDoctype('Sales Invoice')" 
+								class="ms-2 text-orange-500 hover:text-orange-700 p-0.5 rounded hover:bg-orange-100 transition-colors"
+								:title="__('Cancel Delivery Note Mode')"
+							>
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+								</svg>
+							</button>
+						</div>
+
 						<!-- Document Type Toggle (Sales Invoice / Sales Order) -->
 						<div
-							v-if="settingsStore.allowSalesOrder"
+							v-else-if="settingsStore.allowSalesOrder"
 							class="flex items-center bg-gray-100 rounded-xl p-0.5 h-10"
 						>
 							<button
@@ -385,7 +419,7 @@
 			</div>
 
 			<!-- Offers & Coupon Buttons -->
-			<div class="flex gap-2">
+			<div class="flex gap-2" v-if="!cartStore.isDeliveryNoteMode">
 				<!-- View All Offers Button -->
 				<button
 					type="button"
@@ -1088,7 +1122,7 @@
 
 			<!-- Action Buttons -->
 			<div class="flex gap-1.5">
-				<!-- Checkout Button (Primary - 50% width) -->
+				<!-- Checkout / Submit Button (Primary - 50% width) -->
 				<button
 					type="button"
 					@click="handleProceedToPayment"
@@ -1097,9 +1131,11 @@
 						'flex-1 py-2.5 px-3 rounded-lg font-bold text-xs text-white transition-all flex items-center justify-center touch-manipulation',
 						items.length === 0
 							? 'bg-gray-300 cursor-not-allowed'
-							: 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-lg hover:shadow-xl active:scale-[0.98]',
+							: cartStore.isDeliveryNoteMode
+								? 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800 shadow-lg hover:shadow-xl active:scale-[0.98]'
+								: 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-lg hover:shadow-xl active:scale-[0.98]',
 					]"
-					:aria-label="__('Proceed to payment')"
+					:aria-label="cartStore.isDeliveryNoteMode ? __('Submit Delivery Note') : __('Proceed to payment')"
 				>
 					<svg
 						class="w-4 h-4 me-1.5"
@@ -1114,13 +1150,13 @@
 							d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
 						/>
 					</svg>
-					<span>{{ __("Checkout") }}</span>
+					<span>{{ cartStore.isDeliveryNoteMode ? __("Submit Delivery Note") : __("Checkout") }}</span>
 				</button>
 
 				<!-- Hold Order Button (Secondary - 50% width) -->
 				<button
 					type="button"
-					v-if="items.length > 0"
+					v-if="items.length > 0 && !cartStore.isDeliveryNoteMode"
 					@click="$emit('save-draft')"
 					class="flex-1 py-2.5 px-2 rounded-lg font-semibold text-xs text-orange-700 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 transition-all touch-manipulation active:scale-[0.98] flex items-center justify-center"
 					:aria-label="__('Hold order as draft')"
@@ -1177,19 +1213,39 @@ import { createResource } from "frappe-ui";
 import { computed, onBeforeUnmount, onMounted, ref, watch, nextTick } from "vue";
 import EditItemDialog from "./EditItemDialog.vue";
 
+import { usePOSUIStore } from "@/stores/posUI";
+import { parseError } from "@/utils/errorHandler";
+
 /**
  * ============================================================================
  * STORES & COMPOSABLES
  * ============================================================================
  */
 const cartStore = usePOSCartStore(); // Pinia store for cart state management
+const uiStore = usePOSUIStore(); // UI store for dialogs
 const settingsStore = usePOSSettingsStore(); // Pinia store for POS settings
 const offersStore = usePOSOffersStore(); // Pinia store for offers/promotions
 const customerSearchStore = useCustomerSearchStore(); // Pinia store for customer search
 const { formatQuantity } = useFormatters(); // Quantity formatting utilities
 
-function handleProceedToPayment() {
-	emit("proceed-to-payment");
+async function handleProceedToPayment() {
+	if (cartStore.isDeliveryNoteMode) {
+		try {
+			await cartStore.submitInvoice(cartStore.targetDoctype);
+			// Show success message if needed, or rely on posCart logic
+		} catch (error) {
+			console.error("Error submitting delivery note:", error);
+			const errorContext = parseError(error);
+			uiStore.showError(
+				errorContext.title || "Error",
+				errorContext.message || "Failed to submit delivery note",
+				errorContext.technicalDetails || null,
+				errorContext.retryable ? "submit" : null
+			);
+		}
+	} else {
+		emit("proceed-to-payment");
+	}
 }
 
 /**

@@ -178,7 +178,7 @@ const props = defineProps({
     currency: String
 });
 
-const emit = ["update:modelValue"];
+const emit = defineEmits(["update:modelValue"]);
 
 const { formatDate } = useFormatters();
 const { showSuccess, showError } = useToast();

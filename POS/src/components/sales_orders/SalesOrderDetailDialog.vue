@@ -137,6 +137,57 @@
 					</div>
 				</div>
 
+                <!-- Related Documents -->
+                 <div v-if="(orderData.related_invoices && orderData.related_invoices.length) || (orderData.related_delivery_notes && orderData.related_delivery_notes.length)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Related Invoices -->
+                    <div v-if="orderData.related_invoices && orderData.related_invoices.length">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                            <FeatherIcon name="file-text" class="w-4 h-4 me-2" />
+                            {{ __('Related Invoices') }}
+                        </h4>
+                        <div class="flex flex-col gap-2">
+                            <div
+                                v-for="invoice in orderData.related_invoices"
+                                :key="invoice"
+                                class="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm"
+                            >
+                                <span class="text-sm font-medium text-gray-900">{{ invoice }}</span>
+                                <Button
+                                    size="sm"
+                                    variant="subtle"
+                                    @click="openDocument('Sales Invoice', invoice)"
+                                >
+                                    {{ __('View') }}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Related Delivery Notes -->
+                    <div v-if="orderData.related_delivery_notes && orderData.related_delivery_notes.length">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                            <FeatherIcon name="truck" class="w-4 h-4 me-2" />
+                            {{ __('Related Delivery Notes') }}
+                        </h4>
+                        <div class="flex flex-col gap-2">
+                            <div
+                                v-for="dn in orderData.related_delivery_notes"
+                                :key="dn"
+                                class="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm"
+                            >
+                                <span class="text-sm font-medium text-gray-900">{{ dn }}</span>
+                                <Button
+                                    size="sm"
+                                    variant="subtle"
+                                    @click="openDocument('Delivery Note', dn)"
+                                >
+                                    {{ __('View') }}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+
 				<!-- Summary -->
 				<div>
 					<h4 class="text-sm font-semibold text-gray-700 mb-3 text-start">{{ __('Summary') }}</h4>
@@ -196,12 +247,7 @@
 		</template>
 	</Dialog>
 
-	<DeliveryNoteForm
-		v-if="showDeliveryNoteForm"
-		v-model="showDeliveryNoteForm"
-		:source-doc="deliveryNoteSource"
-		@created="loadOrderDetails"
-	/>
+
 	</div>
 </template>
 
@@ -212,7 +258,7 @@ import { logger } from "@/utils/logger"
 import { Button, Dialog, call, FeatherIcon } from "frappe-ui"
 import { ref, watch } from "vue"
 import { useToast } from "@/composables/useToast"
-import DeliveryNoteForm from "@/components/delivery_notes/DeliveryNoteForm.vue"
+
 import { usePOSCartStore } from "@/stores/posCart"
 
 const cartStore = usePOSCartStore()
@@ -235,15 +281,14 @@ function formatCurrency(amount) {
 	return formatCurrencyUtil(Number.parseFloat(amount || 0), props.currency)
 }
 
-const emit = defineEmits(["update:modelValue", "print-order", "order-cancelled", "invoice-created"])
+const emit = defineEmits(["update:modelValue", "print-order", "order-cancelled", "invoice-created", "open-invoice"])
 
 const show = ref(props.modelValue)
 const loading = ref(false)
 const orderData = ref(null)
 const cancelling = ref(false)
 
-const showDeliveryNoteForm = ref(false)
-const deliveryNoteSource = ref(null)
+
 
 
 
@@ -356,7 +401,14 @@ async function handleCreateInvoice() {
                     item_group: item.item_group,
                     description: item.description,
                     discount_percentage: item.discount_percentage,
-                    discount_amount: item.discount_amount
+                    discount_amount: item.discount_amount,
+                    // Reference fields
+                    sales_order: item.sales_order,
+                    against_sales_order: item.against_sales_order,
+                    so_detail: item.so_detail,
+                    against_sales_invoice: item.against_sales_invoice,
+                    si_detail: item.si_detail,
+                    dn_detail: item.dn_detail,
                 }, item.qty)
             })
         }
@@ -373,13 +425,76 @@ async function handleCreateInvoice() {
 async function handleCreateDeliveryNote() {
     if (!orderData.value) return
     try {
-        const mappedDoc = await call("pos_next.api.delivery_notes.make_delivery_note_from_sales_order", {
+        const mappedDoc = await call("pos_next.api.sales_orders.make_delivery_note_from_sales_order", {
             source_name: orderData.value.name
         })
-        deliveryNoteSource.value = mappedDoc
-        showDeliveryNoteForm.value = true
+        
+        // Clear existing cart
+        cartStore.clearCart()
+        
+        // Set target doctype to Delivery Note
+        cartStore.setTargetDoctype('Delivery Note')
+
+        // Set customer
+        if (mappedDoc.customer) {
+            cartStore.setCustomer({
+                name: mappedDoc.customer,
+                customer_name: mappedDoc.customer_name || mappedDoc.customer
+            })
+        }
+
+        // Add items to cart
+        if (mappedDoc.items && mappedDoc.items.length) {
+            mappedDoc.items.forEach(item => {
+                cartStore.addItem({
+                    item_code: item.item_code,
+                    item_name: item.item_name,
+                    description: item.description,
+                    uom: item.uom,
+                    rate: item.rate,
+                    price_list_rate: item.price_list_rate || item.rate,
+                    is_stock_item: item.is_stock_item,
+                    stock_uom: item.stock_uom,
+                    conversion_factor: item.conversion_factor,
+                    item_group: item.item_group,
+                    description: item.description,
+                    discount_percentage: item.discount_percentage,
+                    discount_amount: item.discount_amount,
+                    // Reference fields
+                    sales_order: item.sales_order,
+                    against_sales_order: item.against_sales_order,
+                    so_detail: item.so_detail,
+                    against_sales_invoice: item.against_sales_invoice,
+                    si_detail: item.si_detail,
+                    dn_detail: item.dn_detail,
+                }, item.qty)
+            })
+        }
+
+        showSuccess(__("Delivery Note prepared in Cart"))
+        show.value = false
     } catch (error) {
+        console.error(error)
         showError(error.message || __("Failed to prepare delivery note"))
+    }
+}
+
+
+
+function openDocument(doctype, name) {
+    if (doctype === 'Sales Invoice') {
+        // Emit event to open invoice detail in POS context if possible, or open in new tab
+        // Since we are inside SalesOrderDetailDialog, we might need a way to open InvoiceDetailDialog
+        // For now, let's try to emit an event that the parent can handle, or open standard desk view
+        
+        // Option 1: Open in standard desk view
+         const slug = doctype.toLowerCase().trim().replace(/\s+/g, '-')
+         const url = `/app/${slug}/${name}`
+         window.open(url, '_blank')
+    } else {
+        const slug = doctype.toLowerCase().trim().replace(/\s+/g, '-')
+        const url = `/app/${slug}/${name}`
+        window.open(url, '_blank')
     }
 }
 </script>

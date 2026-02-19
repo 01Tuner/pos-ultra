@@ -521,8 +521,7 @@
 				:options="{ title: uiStore.errorDialogTitle || __('Error'), size: 'md' }">
 				<template #body-content>
 					<div class="py-3">
-						<p class="text-sm text-gray-700 whitespace-pre-line">
-							{{ uiStore.errorDialogMessage || __("An unexpected error occurred.") }}
+						<p class="text-sm text-gray-700 whitespace-pre-line" v-html="uiStore.errorDialogMessage || __('An unexpected error occurred.')">
 						</p>
 						<div v-if="uiStore.errorDetails" class="mt-3 pt-3 border-t border-gray-200">
 							<p class="text-xs text-gray-500">{{ uiStore.errorDetails }}</p>
@@ -711,7 +710,7 @@ const currentActiveManagementTab = computed(() => {
     if (showPromotionManagement.value) return 'promotions';
     if (showStockLookup.value) return 'products';
     if (showReportsDialog.value) return 'reports';
-    return '';
+    return 'dashboard';
 });
 
 // Indirect payment and return refs
@@ -2207,7 +2206,16 @@ function handleManagementMenuClick(menuItem) {
 		showStockLookup.value = true;
 	} else if (menuItem === "reports") {
 		showReportsDialog.value = true;
-	}
+	} else if (menuItem === 'dashboard') {
+        // Close all management dialogs
+        showSalesOrderManagement.value = false;
+        showDeliveryNoteManagement.value = false;
+        showInvoiceManagement.value = false;
+        showPOSSettings.value = false;
+        showPromotionManagement.value = false;
+        showStockLookup.value = false;
+        showReportsDialog.value = false;
+    }
 }
 
 // Load invoice history data

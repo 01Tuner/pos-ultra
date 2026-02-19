@@ -79,6 +79,24 @@ def get_sales_order(name):
         payments = order_data.get("payments")
     
     order_data["payments"] = payments
+
+    # Fetch related Sales Invoices
+    related_invoices = frappe.get_all(
+        "Sales Invoice Item",
+        filters={"sales_order": name, "docstatus": 1},
+        fields=["parent"],
+        distinct=True
+    )
+    order_data["related_invoices"] = [d.parent for d in related_invoices]
+
+    # Fetch related Delivery Notes
+    related_delivery_notes = frappe.get_all(
+        "Delivery Note Item",
+        filters={"against_sales_order": name, "docstatus": 1},
+        fields=["parent"],
+        distinct=True
+    )
+    order_data["related_delivery_notes"] = [d.parent for d in related_delivery_notes]
     
     return order_data
 
@@ -109,6 +127,13 @@ def make_invoice_from_sales_order(source_name):
     """Return mapped Sales Invoice doc from Sales Order without inserting."""
     from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
     doc = make_sales_invoice(source_name)
+    return doc.as_dict()
+
+@frappe.whitelist()
+def make_delivery_note_from_sales_order(source_name):
+    """Return mapped Delivery Note doc from Sales Order without inserting."""
+    from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note
+    doc = make_delivery_note(source_name)
     return doc.as_dict()
 
 @frappe.whitelist()

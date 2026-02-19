@@ -37,16 +37,16 @@ function cleanErrorMessage(rawMessage) {
 
 	let text = typeof rawMessage === "string" ? rawMessage : String(rawMessage)
 
-	// Remove HTML tags
-	if (typeof window !== "undefined" && typeof document !== "undefined") {
-		const container = document.createElement("div")
-		container.innerHTML = text
-		text = container.textContent || container.innerText || ""
-	} else {
-		text = text.replace(/<[^>]*>/g, " ")
-	}
+	// Don't strip HTML tags anymore as we want to support formatted messages from backend
+	// if (typeof window !== "undefined" && typeof document !== "undefined") {
+	// 	const container = document.createElement("div")
+	// 	container.innerHTML = text
+	// 	text = container.textContent || container.innerText || ""
+	// } else {
+	// 	text = text.replace(/<[^>]*>/g, " ")
+	// }
 
-	return text.replace(/\s+/g, " ").trim()
+	return text.trim()
 }
 
 /**
@@ -88,15 +88,20 @@ export function parseError(error) {
 	}
 
 	// Extract primary message
+	const serverMessagesStr =
+		error._server_messages ||
+		error.data?._server_messages ||
+		error.response?.data?._server_messages;
+
 	if (
 		error.messages &&
 		Array.isArray(error.messages) &&
 		error.messages.length > 0
 	) {
 		context.message = cleanErrorMessage(error.messages[0])
-	} else if (error._server_messages) {
+	} else if (serverMessagesStr) {
 		try {
-			const serverMessages = JSON.parse(error._server_messages)
+			const serverMessages = JSON.parse(serverMessagesStr)
 			if (serverMessages && serverMessages.length > 0) {
 				const firstMessage = JSON.parse(serverMessages[0])
 				context.message = cleanErrorMessage(

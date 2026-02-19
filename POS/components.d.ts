@@ -20,7 +20,6 @@ declare module 'vue' {
     CustomerDialog: typeof import('./src/components/sale/CustomerDialog.vue')['default']
     DeliveryNoteDetailDialog: typeof import('./src/components/delivery_notes/DeliveryNoteDetailDialog.vue')['default']
     DeliveryNoteFilters: typeof import('./src/components/delivery_notes/DeliveryNoteFilters.vue')['default']
-    DeliveryNoteForm: typeof import('./src/components/delivery_notes/DeliveryNoteForm.vue')['default']
     DeliveryNoteManagement: typeof import('./src/components/delivery_notes/DeliveryNoteManagement.vue')['default']
     DraftInvoicesDialog: typeof import('./src/components/sale/DraftInvoicesDialog.vue')['default']
     EditItemDialog: typeof import('./src/components/sale/EditItemDialog.vue')['default']

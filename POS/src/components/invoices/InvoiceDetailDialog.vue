@@ -58,7 +58,7 @@
                             <!-- Action Buttons -->
                             <div class="flex gap-2">
                                 <Button
-                                    v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled' && invoiceData.docstatus === 1"
+                                    v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled' && invoiceData.docstatus === 1 && !invoiceData.update_stock"
                                     variant="subtle"
                                     theme="gray"
                                     size="sm"
@@ -354,6 +354,61 @@
 					</div>
 				</div>
 
+				<!-- Related Documents -->
+                 <div v-if="(invoiceData.related_sales_orders && invoiceData.related_sales_orders.length) || (invoiceData.related_delivery_notes && invoiceData.related_delivery_notes.length)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Related Sales Orders -->
+                    <div v-if="invoiceData.related_sales_orders && invoiceData.related_sales_orders.length">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                            <svg class="w-4 h-4 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            {{ __('Related Sales Orders') }}
+                        </h4>
+                        <div class="flex flex-col gap-2">
+                            <div
+                                v-for="so in invoiceData.related_sales_orders"
+                                :key="so"
+                                class="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm"
+                            >
+                                <span class="text-sm font-medium text-gray-900">{{ so }}</span>
+                                <Button
+                                    size="sm"
+                                    variant="subtle"
+                                    @click="openDocument({ voucher_type: 'Sales Order', voucher_no: so })"
+                                >
+                                    {{ __('View') }}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Related Delivery Notes -->
+                    <div v-if="invoiceData.related_delivery_notes && invoiceData.related_delivery_notes.length">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                            <svg class="w-4 h-4 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                            </svg>
+                            {{ __('Related Delivery Notes') }}
+                        </h4>
+                        <div class="flex flex-col gap-2">
+                            <div
+                                v-for="dn in invoiceData.related_delivery_notes"
+                                :key="dn"
+                                class="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm"
+                            >
+                                <span class="text-sm font-medium text-gray-900">{{ dn }}</span>
+                                <Button
+                                    size="sm"
+                                    variant="subtle"
+                                    @click="openDocument({ voucher_type: 'Delivery Note', voucher_no: dn })"
+                                >
+                                    {{ __('View') }}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+
 				<!-- Additional Info -->
 				<div v-if="invoiceData.remarks" class="bg-gray-50 p-4 rounded-lg border border-gray-200">
 					<h4 class="text-sm font-semibold text-gray-700 mb-2 text-start">{{ __('Remarks') }}</h4>
@@ -375,11 +430,7 @@
 				</Button>
 			</div>
 		</template>
-        <DeliveryNoteForm
-            v-if="showDeliveryNoteForm"
-            v-model="showDeliveryNoteForm"
-            :source-doc="deliveryNoteSource"
-        />
+
 	</Dialog>
 </template>
 
@@ -392,11 +443,14 @@ import { logger } from "@/utils/logger"
 import { Button, Dialog, call } from "frappe-ui"
 import { ref, watch, nextTick, computed } from "vue"
 import { usePOSSettingsStore } from "@/stores/posSettings"
-import DeliveryNoteForm from "@/components/delivery_notes/DeliveryNoteForm.vue"
+import { usePOSCartStore } from "@/stores/posCart"
+import { useToast } from "@/composables/useToast"
 
 const settingsStore = usePOSSettingsStore()
+const cartStore = usePOSCartStore()
 const allowReturn = computed(() => settingsStore.allowReturn)
 
+const { showSuccess, showError } = useToast()
 const log = logger.create('InvoiceDetailDialog')
 const { formatDate, formatTime } = useFormatters()
 
@@ -432,8 +486,7 @@ const show = ref(props.modelValue)
 const loading = ref(false)
 const invoiceData = ref(null)
 
-const showDeliveryNoteForm = ref(false)
-const deliveryNoteSource = ref(null)
+
 
 // Computed: Check if this is a credit sale (Pay on Account - no payments, full outstanding)
 const isCreditSale = computed(() => {
@@ -550,9 +603,53 @@ async function handleCreateDeliveryNote() {
         const mappedDoc = await call("pos_next.api.delivery_notes.make_delivery_note_from_invoice", {
             source_name: invoiceData.value.name
         })
-        deliveryNoteSource.value = mappedDoc
-        showDeliveryNoteForm.value = true
+
+        // Clear existing cart
+        cartStore.clearCart()
+        
+        // Set target doctype to Delivery Note
+        cartStore.setTargetDoctype('Delivery Note')
+
+        // Set customer
+        if (mappedDoc.customer) {
+            cartStore.setCustomer({
+                name: mappedDoc.customer,
+                customer_name: mappedDoc.customer_name || mappedDoc.customer
+            })
+        }
+
+        // Add items to cart
+        if (mappedDoc.items && mappedDoc.items.length) {
+            mappedDoc.items.forEach(item => {
+                cartStore.addItem({
+                    item_code: item.item_code,
+                    item_name: item.item_name,
+                    description: item.description,
+                    uom: item.uom,
+                    rate: item.rate,
+                    price_list_rate: item.price_list_rate || item.rate,
+                    is_stock_item: item.is_stock_item,
+                    stock_uom: item.stock_uom,
+                    conversion_factor: item.conversion_factor,
+                    item_group: item.item_group,
+                    description: item.description,
+                    discount_percentage: item.discount_percentage,
+                    discount_amount: item.discount_amount,
+                    // Reference fields
+                    sales_order: item.sales_order,
+                    against_sales_order: item.against_sales_order,
+                    so_detail: item.so_detail,
+                    against_sales_invoice: item.against_sales_invoice,
+                    si_detail: item.si_detail,
+                    dn_detail: item.dn_detail,
+                }, item.qty)
+            })
+        }
+
+        showSuccess(__("Delivery Note prepared in Cart"))
+        show.value = false
     } catch (error) {
+        console.error(error)
         showError(error.message || __("Failed to prepare delivery note"))
     }
 }

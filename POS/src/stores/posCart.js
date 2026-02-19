@@ -108,6 +108,7 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		recalculateItem,
 		rebuildIncrementalCache,
 		formatItemsForSubmission,
+		currentInvoiceName,
 	} = useInvoice()
 
 	const offersStore = usePOSOffersStore()
@@ -120,7 +121,7 @@ export const usePOSCartStore = defineStore("posCart", () => {
 	const appliedCoupon = ref(null)
 	const selectionMode = ref("uom") // 'uom' or 'variant'
 	const suppressOfferReapply = ref(false)
-	const currentDraftId = ref(null)
+	// const currentDraftId = ref(null) // Replaced by currentInvoiceName from useInvoice
 	const targetDoctype = ref("Sales Invoice")
 
 	// Offer processing state management
@@ -141,6 +142,7 @@ export const usePOSCartStore = defineStore("posCart", () => {
 
 	// Computed for backward compatibility and UI binding
 	const isProcessingOffers = computed(() => offerProcessingState.value.isProcessing)
+	const isDeliveryNoteMode = computed(() => targetDoctype.value === "Delivery Note")
 
 	/**
 	 * Generates a comprehensive hash of the current cart state.
@@ -225,7 +227,7 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		customer.value = null
 		appliedOffers.value = []
 		appliedCoupon.value = null
-		currentDraftId.value = null
+		// currentDraftId.value = null // Handled by clearInvoiceCart -> resetInvoice
 		targetDoctype.value = "Sales Invoice"
 
 		// Reset offer processing state
@@ -1678,7 +1680,7 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		appliedCoupon,
 		selectionMode,
 		suppressOfferReapply,
-		currentDraftId,
+
 		offerProcessingState, // Offer processing state for UI feedback
 
 		// Computed
@@ -1687,6 +1689,7 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		hasCustomer,
 		isProcessingOffers, // True when any offer operation is in progress
 		isSubmitting, // True when invoice submission is in progress (mutex protected)
+		isDeliveryNoteMode,
 
 		// Actions
 		addItem,

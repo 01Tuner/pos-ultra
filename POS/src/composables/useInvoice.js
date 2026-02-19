@@ -29,6 +29,7 @@ export function useInvoice() {
 	const couponCode = ref(null)
 	const taxRules = ref([]) // Tax rules from POS Profile
 	const taxInclusive = ref(false) // Tax inclusive setting from POS Settings
+	const currentInvoiceName = ref(null) // Track current draft invoice name
 
 	// Submission state - prevents duplicate submissions
 	const isSubmitting = ref(false)
@@ -231,6 +232,17 @@ export function useInvoice() {
 				brand: item.brand,
 				// Resolved barcode flag - prevents editing qty/uom/rate for weighted/priced barcodes
 				is_resolved_barcode: item.is_resolved_barcode || false,
+				// Reference fields for Delivery Note / Return
+				sales_order: item.sales_order,
+				against_sales_order: item.against_sales_order,
+				so_detail: item.so_detail,
+				against_sales_invoice: item.against_sales_invoice,
+				si_detail: item.si_detail,
+				return_against_sales_order: item.return_against_sales_order,
+				so_detail: item.so_detail,
+				so_detail: item.so_detail,
+				dn_detail: item.dn_detail,
+				delivery_note: item.delivery_note,
 			}
 			invoiceItems.value.push(newItem)
 			// Recalculate the newly added item to apply taxes
@@ -648,6 +660,15 @@ export function useInvoice() {
 			discount_percentage: item.discount_percentage || 0,
 			discount_amount: item.discount_amount || 0,
 			pricing_rules: stringifyPricingRules(item.pricing_rules),
+			// Reference fields
+			sales_order: item.sales_order,
+			against_sales_order: item.against_sales_order,
+			so_detail: item.so_detail,
+			against_sales_invoice: item.against_sales_invoice,
+			si_detail: item.si_detail,
+			si_detail: item.si_detail,
+			dn_detail: item.dn_detail,
+			delivery_note: item.delivery_note,
 		}))
 	}
 
@@ -727,16 +748,19 @@ export function useInvoice() {
 			posa_pos_opening_shift: posOpeningShift.value,
 			customer: customer.value?.name || customer.value,
 			items: formatItemsForSubmission(rawItems),
-			payments: rawPayments.map((p) => ({
-				mode_of_payment: p.mode_of_payment,
-				amount: p.amount,
-				type: p.type,
-			})),
 			discount_amount: additionalDiscount.value || 0,
 			coupon_code: couponCode.value,
-			is_pos: 1,
-			update_stock: 1,
 		}
+
+		// if (targetDoctype === 'Sales Invoice') {
+		invoiceData.payments = rawPayments.map((p) => ({
+			mode_of_payment: p.mode_of_payment,
+			amount: p.amount,
+			type: p.type,
+		}))
+		invoiceData.is_pos = 1
+		invoiceData.update_stock = 1
+		// }
 
 		if (targetDoctype === "Sales Order") {
 			const today = new Date().toISOString().split('T')[0]
@@ -775,22 +799,32 @@ export function useInvoice() {
 				const rawPayments = toRaw(payments.value)
 				const rawSalesTeam = toRaw(salesTeam.value)
 
+
 				const invoiceData = {
 					doctype: targetDoctype,
 					pos_profile: posProfile.value,
 					posa_pos_opening_shift: posOpeningShift.value,
 					customer: customer.value?.name || customer.value,
 					items: formatItemsForSubmission(rawItems),
-					payments: rawPayments.map((p) => ({
+					discount_amount: additionalDiscount.value || 0,
+					coupon_code: couponCode.value,
+				}
+
+				// If we have an existing draft, update it instead of creating new
+				if (currentInvoiceName.value) {
+					invoiceData.name = currentInvoiceName.value
+				}
+
+				if (targetDoctype === 'Sales Invoice') {
+					invoiceData.payments = rawPayments.map((p) => ({
 						mode_of_payment: p.mode_of_payment,
 						amount: p.amount,
 						type: p.type,
-					})),
-					discount_amount: additionalDiscount.value || 0,
-					coupon_code: couponCode.value,
-					is_pos: 1,
-					update_stock: 1, // Critical: Ensures stock is updated
+					}))
+					invoiceData.update_stock = 1
 				}
+
+				invoiceData.is_pos = 1
 
 				if (targetDoctype === "Sales Order" && deliveryDate) {
 					invoiceData.delivery_date = deliveryDate
@@ -822,6 +856,9 @@ export function useInvoice() {
 						"Failed to create draft invoice - no invoice name returned",
 					)
 				}
+
+				// Store the draft name for retries
+				currentInvoiceName.value = invoiceDoc.name
 
 				const submitData = {
 					change_amount:
@@ -943,6 +980,7 @@ export function useInvoice() {
 		payments.value = []
 		additionalDiscount.value = 0
 		couponCode.value = null
+		currentInvoiceName.value = null
 
 		// Reset incremental cache
 		_cachedSubtotal.value = 0
@@ -970,6 +1008,7 @@ export function useInvoice() {
 		payments.value = []
 		additionalDiscount.value = 0
 		couponCode.value = null
+		currentInvoiceName.value = null
 
 		// Reset incremental cache
 		_cachedSubtotal.value = 0
@@ -1048,6 +1087,7 @@ export function useInvoice() {
 		taxRules,
 		taxInclusive,
 		isSubmitting,
+		currentInvoiceName,
 
 		// Computed
 		subtotal,

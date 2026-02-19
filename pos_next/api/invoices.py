@@ -461,7 +461,7 @@ def update_invoice(data):
             pos_profile_doc.company if pos_profile_doc else None
         )
 
-        if company and invoice_doc.get("payments") and doctype == "Sales Invoice":
+        if company and doctype == "Sales Invoice" and invoice_doc.get("payments"):
             for payment in invoice_doc.payments:
                 mode_of_payment = payment.get("mode_of_payment")
                 if mode_of_payment and not payment.get("account"):
@@ -576,6 +576,14 @@ def update_invoice(data):
         # ========================================================================
         disable_rounded = 1  # Default: disable rounding for POS (show exact amounts)
 
+        # Force update_stock = 0 if creating from Delivery Note to prevent double deduction
+        # Check all items for delivery_note link
+        if invoice_doc.items:
+            for item in invoice_doc.items:
+                if item.delivery_note:
+                    invoice_doc.update_stock = 0
+                    break
+
         if pos_profile:
             try:
                 pos_settings_value = frappe.db.get_value(
@@ -602,20 +610,21 @@ def update_invoice(data):
             invoice_doc.base_grand_total = 0.0
 
         # Set accounts for payment methods before saving
-        for payment in invoice_doc.payments:
-            mode_of_payment = payment.get("mode_of_payment")
-            if mode_of_payment and not payment.get("account"):
-                try:
-                    account_info = get_payment_account(
-                        mode_of_payment, invoice_doc.company
-                    )
-                    if account_info:
-                        payment.account = account_info.get("account")
-                except Exception as e:
-                    frappe.log_error(
-                        f"Failed to get payment account for {mode_of_payment}: {e}",
-                        "Payment Account Lookup"
-                    )
+        if doctype == "Sales Invoice" and invoice_doc.get("payments"):
+            for payment in invoice_doc.payments:
+                mode_of_payment = payment.get("mode_of_payment")
+                if mode_of_payment and not payment.get("account"):
+                    try:
+                        account_info = get_payment_account(
+                            mode_of_payment, invoice_doc.company
+                        )
+                        if account_info:
+                            payment.account = account_info.get("account")
+                    except Exception as e:
+                        frappe.log_error(
+                            f"Failed to get payment account for {mode_of_payment}: {e}",
+                            "Payment Account Lookup"
+                        )
 
         # For return invoices, ensure payments are negative
         if invoice_doc.get("is_return"):
@@ -960,6 +969,14 @@ def submit_invoice(invoice=None, data=None):
         invoice_name = invoice.get("name")
 
         # Get or create invoice
+        # Check if items are linked to a Delivery Note and disable update_stock in dict
+        # This prevents validation error during initial creation/update in update_invoice
+        if invoice.get("items"):
+            for item in invoice.get("items"):
+                if item.get("delivery_note"):
+                    invoice["update_stock"] = 0
+                    break
+
         if not invoice_name or not frappe.db.exists(doctype, invoice_name):
             created = update_invoice(json.dumps(invoice))
             if not created or not isinstance(created, dict):
@@ -1051,6 +1068,18 @@ def submit_invoice(invoice=None, data=None):
                     "allow_negative_stock"
                 ) or 0
             )
+
+        # Check if items are linked to a Delivery Note
+        has_delivery_note = False
+        if invoice_doc.items:
+            for item in invoice_doc.items:
+                if item.delivery_note:
+                    has_delivery_note = True
+                    break
+        
+        # If linked to Delivery Note, do not update stock again
+        if has_delivery_note:
+            invoice_doc.update_stock = 0
 
         # Validate stock availability only if negative stock is not allowed
         if not pos_settings_allow_negative:
@@ -1146,6 +1175,35 @@ def get_invoice(invoice_name):
 	# Get invoice document
 	invoice = frappe.get_doc("Sales Invoice", invoice_name)
 	invoice_dict = invoice.as_dict()
+	invoice_dict["update_stock"] = invoice.update_stock
+
+    # Fetch related Sales Orders
+	related_sales_orders = frappe.get_all(
+		"Sales Invoice Item",
+		filters={"parent": invoice_name, "sales_order": ["is", "set"]},
+		fields=["sales_order"],
+		distinct=True
+	)
+	invoice_dict["related_sales_orders"] = [d.sales_order for d in related_sales_orders]
+
+	# Fetch related Delivery Notes
+	related_delivery_notes = frappe.get_all(
+		"Sales Invoice Item",
+		filters={"parent": invoice_name, "delivery_note": ["is", "set"]},
+		fields=["delivery_note"],
+		distinct=True
+	)
+	# Also check via Delivery Note Item if connected differently (DN created from SI)
+	dn_from_si = frappe.get_all(
+		"Delivery Note Item",
+		filters={"against_sales_invoice": invoice_name, "docstatus": 1},
+		fields=["parent"],
+		distinct=True
+	)
+	
+	dn_list = [d.delivery_note for d in related_delivery_notes]
+	dn_list.extend([d.parent for d in dn_from_si])
+	invoice_dict["related_delivery_notes"] = list(set(dn_list))
 
 	# Enrich with full payment history from Payment Ledger
 	return enrich_invoice_with_payment_history(invoice_dict, include_metadata=True)

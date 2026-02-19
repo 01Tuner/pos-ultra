@@ -126,6 +126,61 @@
 						</div>
 					</div>
 				</div>
+
+				<!-- Related Documents -->
+				 <div v-if="(dnData.related_sales_orders && dnData.related_sales_orders.length) || (dnData.related_invoices && dnData.related_invoices.length)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<!-- Related Sales Orders -->
+					<div v-if="dnData.related_sales_orders && dnData.related_sales_orders.length">
+						<h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+							<svg class="w-4 h-4 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+							</svg>
+							{{ __('Related Sales Orders') }}
+						</h4>
+						<div class="flex flex-col gap-2">
+							<div
+								v-for="so in dnData.related_sales_orders"
+								:key="so"
+								class="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm"
+							>
+								<span class="text-sm font-medium text-gray-900">{{ so }}</span>
+								<Button
+									size="sm"
+									variant="subtle"
+									@click="openDocument('Sales Order', so)"
+								>
+									{{ __('View') }}
+								</Button>
+							</div>
+						</div>
+					</div>
+
+					<!-- Related Invoices -->
+					<div v-if="dnData.related_invoices && dnData.related_invoices.length">
+						<h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+							<svg class="w-4 h-4 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+							</svg>
+							{{ __('Related Invoices') }}
+						</h4>
+						<div class="flex flex-col gap-2">
+							<div
+								v-for="invoice in dnData.related_invoices"
+								:key="invoice"
+								class="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm"
+							>
+								<span class="text-sm font-medium text-gray-900">{{ invoice }}</span>
+								<Button
+									size="sm"
+									variant="subtle"
+									@click="openDocument('Sales Invoice', invoice)"
+								>
+									{{ __('View') }}
+								</Button>
+							</div>
+						</div>
+					</div>
+				 </div>
 			</div>
 
 			<div v-else class="text-center py-12">
@@ -190,6 +245,18 @@ const emit = defineEmits(["update:modelValue", "print-dn", "create-invoice"])
 const show = ref(props.modelValue)
 const loading = ref(false)
 const dnData = ref(null)
+
+function openDocument(doctype, name) {
+    if (doctype === 'Sales Invoice') {
+         const slug = doctype.toLowerCase().trim().replace(/\s+/g, '-')
+         const url = `/app/${slug}/${name}`
+         window.open(url, '_blank')
+    } else {
+        const slug = doctype.toLowerCase().trim().replace(/\s+/g, '-')
+        const url = `/app/${slug}/${name}`
+        window.open(url, '_blank')
+    }
+}
 
 watch(
 	() => props.modelValue,

@@ -168,6 +168,8 @@ import { call } from "@/utils/apiWrapper";
 import DeliveryNoteDetailDialog from "./DeliveryNoteDetailDialog.vue";
 import DeliveryNoteFilters from "./DeliveryNoteFilters.vue";
 import { useDeliveryNoteFilters } from "@/composables/useDeliveryNoteFilters";
+import { usePOSCartStore } from "@/stores/posCart";
+import { usePOSSettingsStore } from "@/stores/posSettings";
 
 const props = defineProps({
 	modelValue: Boolean,
@@ -175,10 +177,11 @@ const props = defineProps({
 	currency: String
 });
 
-const emit = ["update:modelValue"];
+const emit = defineEmits(["update:modelValue"]);
 
 const { formatDate } = useFormatters();
 const { showSuccess, showError } = useToast();
+const cartStore = usePOSCartStore();
 
 const show = ref(props.modelValue);
 const deliveryNotes = ref([]);
@@ -269,13 +272,66 @@ async function handlePrintDN(dn) {
 async function handleCreateInvoice(dn) {
     if (!dn) return;
     try {
-         const invoiceName = await call("pos_next.api.delivery_notes.make_invoice_from_delivery_note", {
+        loading.value = true;
+        
+        // 1. Fetch mapped Sales Invoice items from backend
+         const invoiceDoc = await call("pos_next.api.delivery_notes.make_invoice_from_delivery_note_mapped", {
              source_name: dn.name
          });
-         showSuccess(__("Invoice {0} created successfully", [invoiceName]));
+         
+         if (!invoiceDoc) throw new Error(__("Failed to map invoice"));
+
+         // 2. Clear current cart (resets mode to 'Sales Invoice' usually)
+         cartStore.clearCart();
+
+         // 3. Set Customer
+         if (invoiceDoc.customer) {
+             cartStore.setCustomer({
+                 name: invoiceDoc.customer,
+                 customer_name: invoiceDoc.customer_name || invoiceDoc.customer,
+                 // customer_group, territory, etc. if needed
+             });
+         }
+         
+         // 4. Populate Cart
+         if (invoiceDoc.items && invoiceDoc.items.length) {
+             for (const item of invoiceDoc.items) {
+                // Determine if stock item (usually yes for invoices from DN)
+                // We use item.is_stock_item from mapped doc if available, or default to checking item details if needed.
+                // Here we assume mapping is correct.
+                
+                await cartStore.addItem({
+                    item_code: item.item_code,
+                    item_name: item.item_name,
+                    description: item.description,
+                    uom: item.uom,
+                    stock_uom: item.stock_uom,
+                    conversion_factor: item.conversion_factor,
+                    rate: item.rate, // Use mapped rate
+                    price_list_rate: item.price_list_rate || item.rate,
+                    is_stock_item: item.is_stock_item,
+                    discount_percentage: item.discount_percentage,
+                    discount_amount: item.discount_amount,
+                    
+                    // Reference fields for linking back to DN/SO
+                    delivery_note: dn.name,
+                    dn_detail: item.dn_detail,
+                    sales_order: item.sales_order,
+                    so_detail: item.so_detail,
+                    against_sales_order: item.against_sales_order
+                }, item.qty || 1, true, props.posProfile); // autoAdd=true to skip stock check? Or validation needed?
+             }
+         }
+         
+         // 5. Success feedback and close dialogs
+         showSuccess(__("Invoice created from Delivery Note. Verify items and proceed to payment."));
          showDetails.value = false;
+         show.value = false; // Close management overlay
+         
     } catch (error) {
         showError(error.message || __("Failed to create Invoice"));
+    } finally {
+        loading.value = false;
     }
 }
 
