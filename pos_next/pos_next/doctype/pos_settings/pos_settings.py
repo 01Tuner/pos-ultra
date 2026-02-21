@@ -105,12 +105,16 @@ def get_pos_settings(pos_profile):
 	if not has_access and not frappe.has_permission("POS Settings", "read"):
 		frappe.throw(_("You don't have access to this POS Profile"))
 
-	settings = frappe.db.get_value(
+	pos_settings_name = frappe.db.get_value(
 		"POS Settings",
 		{"pos_profile": pos_profile},
-		"*",
-		as_dict=True
+		"name"
 	)
+
+	if pos_settings_name:
+		settings = frappe.get_doc("POS Settings", pos_settings_name).as_dict()
+	else:
+		settings = None
 
 	# If no settings exist, create default settings
 	if not settings:
