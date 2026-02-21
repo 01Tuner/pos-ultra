@@ -476,11 +476,14 @@ def create_payment_entry(
     pe.paid_from_account_currency = invoice.currency
     pe.paid_to_account_currency = invoice.currency
 
-    # Set reference
+    # Set reference_no to the POS Opening Shift name so that get_payments_entries()
+    # can find this Payment Entry when closing the shift.
+    # Fall back to 'POS-{invoice_name}' if no opening shift is linked.
     if reference_no:
         pe.reference_no = str(reference_no)[:140]  # Limit length
     else:
-        pe.reference_no = f"POS-{invoice_name}"
+        pos_opening_shift = invoice.get("posa_pos_opening_shift")
+        pe.reference_no = pos_opening_shift if pos_opening_shift else f"POS-{invoice_name}"
 
     pe.reference_date = posting_date
 
