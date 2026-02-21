@@ -52,6 +52,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		// Delivery
 		use_delivery_charges: 0,
 		auto_set_delivery_charges: 0,
+		enable_delivery_note: 0,
 		// Advanced Settings
 		use_limit_search: 0,
 		search_limit: 1000,
@@ -61,6 +62,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		// Miscellaneous
 		input_qty: 0,
 		allow_negative_stock: 0,
+		reports: [],
 		// Sales Persons
 		enable_sales_persons: "Disabled",
 	})
@@ -186,6 +188,12 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 	const autoSetDeliveryCharges = computed(() =>
 		Boolean(settings.value.auto_set_delivery_charges),
 	)
+	const enableDeliveryNote = computed(() =>
+		Boolean(settings.value.enable_delivery_note),
+	)
+
+	// Computed - Reports
+	const reports = computed(() => settings.value.reports || [])
 
 	// Computed - Advanced Settings
 	const useLimitSearch = computed(() =>
@@ -313,6 +321,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 			silent_print: 0,
 			use_delivery_charges: 0,
 			auto_set_delivery_charges: 0,
+			enable_delivery_note: 0,
 			use_limit_search: 0,
 			search_limit: 1000,
 			allow_submissions_in_background_job: 0,
@@ -321,6 +330,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 			input_qty: 0,
 			allow_negative_stock: 0,
 			enable_sales_persons: "Disabled",
+			reports: [],
 		}
 		isLoaded.value = false
 	}
@@ -432,6 +442,10 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		// Computed - Delivery
 		useDeliveryCharges,
 		autoSetDeliveryCharges,
+		enableDeliveryNote,
+
+		// Computed - Reports
+		reports,
 
 		// Computed - Advanced Settings
 		useLimitSearch,

@@ -338,18 +338,46 @@
 
 			<!-- Sales Order Management -->
 			<SalesOrderManagement v-model="showSalesOrderManagement" :pos-profile="shiftStore.profileName"
-				:currency="shiftStore.profileCurrency" />
+				:currency="shiftStore.profileCurrency"
+                @open-invoice="handleViewInvoiceFallback"
+                @open-delivery-note="handleViewDeliveryNote" />
 
 			<!-- Delivery Note Management -->
 			<DeliveryNoteManagement v-model="showDeliveryNoteManagement" :pos-profile="shiftStore.profileName"
-				:currency="shiftStore.profileCurrency" />
+				:currency="shiftStore.profileCurrency"
+                @open-invoice="handleViewInvoiceFallback"
+                @open-sales-order="handleViewSalesOrder" />
 
 			<!-- Invoice Detail Dialog -->
 			<InvoiceDetailDialog v-model="showInvoiceDetail" :invoice-name="selectedInvoiceForView"
 				:pos-profile="shiftStore.profileName" :currency="shiftStore.profileCurrency"
 				@print-invoice="handlePrintInvoice" @make-payment="handleMakePaymentFromDetail"
 				@return-invoice="handleReturnInvoiceFromDetail"
-				@open-invoice="(name) => selectedInvoiceForView = name" />
+				@open-invoice="(name) => selectedInvoiceForView = name"
+                @open-sales-order="handleViewSalesOrder"
+                @open-delivery-note="handleViewDeliveryNote" />
+
+            <!-- Standalone Sales Order Detail Dialog -->
+            <SalesOrderDetailDialog
+                v-model="showSalesOrderDetail"
+                :order-name="selectedSalesOrderForView"
+                :pos-profile="shiftStore.profileName"
+                :currency="shiftStore.profileCurrency"
+                @print-order="handlePrintOrder"
+                @open-invoice="handleViewInvoiceFallback"
+                @open-delivery-note="handleViewDeliveryNote"
+            />
+
+            <!-- Standalone Delivery Note Detail Dialog -->
+            <DeliveryNoteDetailDialog
+                v-model="showDeliveryNoteDetail"
+                :dn-name="selectedDeliveryNoteForView"
+                :pos-profile="shiftStore.profileName"
+                :currency="shiftStore.profileCurrency"
+                @print-dn="handlePrintDN"
+                @open-invoice="handleViewInvoiceFallback"
+                @open-sales-order="handleViewSalesOrder"
+            />
 
             <!-- Invoice Payment Dialog (Generic) -->
             <PaymentDialog
@@ -587,6 +615,8 @@ import InvoiceManagement from "@/components/invoices/InvoiceManagement.vue";
 import SalesOrderManagement from "@/components/sales_orders/SalesOrderManagement.vue";
 import DeliveryNoteManagement from "@/components/delivery_notes/DeliveryNoteManagement.vue";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog.vue";
+import SalesOrderDetailDialog from "@/components/sales_orders/SalesOrderDetailDialog.vue";
+import DeliveryNoteDetailDialog from "@/components/delivery_notes/DeliveryNoteDetailDialog.vue";
 import ReportsDialog from "@/components/sale/ReportsDialog.vue";
 import { useRealtimeStock } from "@/composables/useRealtimeStock";
 import { usePOSEvents } from "@/composables/usePOSEvents";
@@ -596,7 +626,7 @@ import { useUserData } from "@/data/user";
 import { parseError } from "@/utils/errorHandler";
 import { offlineWorker } from "@/utils/offline/workerClient";
 import { cacheInvoiceHistory, getCachedInvoiceHistory } from "@/utils/offline/sync";
-import { printInvoice, printInvoiceByName } from "@/utils/printInvoice";
+import { printInvoice, printInvoiceByName, printSalesOrderByName } from "@/utils/printInvoice";
 import { Button, Dialog, createResource } from "frappe-ui";
 import { call } from "@/utils/apiWrapper";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
@@ -701,6 +731,10 @@ const showDeliveryNoteManagement = ref(false);
 const showInvoiceDetail = ref(false);
 const showReportsDialog = ref(false);
 const selectedInvoiceForView = ref(null);
+const showSalesOrderDetail = ref(false);
+const selectedSalesOrderForView = ref(null);
+const showDeliveryNoteDetail = ref(false);
+const selectedDeliveryNoteForView = ref(null);
 
 const currentActiveManagementTab = computed(() => {
     if (showSalesOrderManagement.value) return 'sales_orders';
@@ -763,6 +797,43 @@ async function handleInvoicePaymentCompleted(paymentData) {
 		showError(error.message || __("Failed to add payment"));
         console.error(error);
 	}
+}
+
+function handleViewInvoiceFallback(name) {
+    if (showInvoiceDetail.value) {
+        selectedInvoiceForView.value = name;
+    } else {
+        handleViewInvoice({ name });
+    }
+}
+
+function handleViewSalesOrder(name) {
+    selectedSalesOrderForView.value = name;
+    showSalesOrderDetail.value = true;
+}
+
+function handleViewDeliveryNote(name) {
+    selectedDeliveryNoteForView.value = name;
+    showDeliveryNoteDetail.value = true;
+}
+
+async function handlePrintOrder(order) {
+    try {
+        await printSalesOrderByName(order.name);
+    } catch (error) {
+        console.error("Print failed", error);
+        const printUrl = `/printview?doctype=Sales%20Order&name=${order.name}&format=Standard`;
+        window.open(printUrl, '_blank');
+    }
+}
+
+async function handlePrintDN(dn) {
+    try {
+         const printUrl = `/printview?doctype=Delivery%20Note&name=${dn.name}&format=Standard`;
+         window.open(printUrl, '_blank');
+    } catch (error) {
+         console.error("Print failed", error);
+    }
 }
 
 // Invoice history data (used by InvoiceManagement component)
@@ -1613,15 +1684,22 @@ async function handlePaymentCompleted(paymentData) {
 
 				if (shiftStore.autoPrintEnabled) {
 					try {
-						await handlePrintInvoice({ name: invoiceName });
-						showSuccess(__("Invoice {0} created and sent to printer", [invoiceName]));
+						if (cartStore.targetDoctype === "Sales Order") {
+							await printSalesOrderByName(invoiceName);
+							showSuccess(__("Sales Order {0} created and sent to printer", [invoiceName]));
+						} else {
+							await handlePrintInvoice({ name: invoiceName });
+							showSuccess(__("Invoice {0} created and sent to printer", [invoiceName]));
+						}
 					} catch (error) {
 						log.error("Auto-print error:", error);
-						showWarning(__("Invoice {0} created but print failed", [invoiceName]));
+						const docTypeLabel = cartStore.targetDoctype === "Sales Order" ? "Sales Order" : "Invoice";
+						showWarning(__("{0} {1} created but print failed", [docTypeLabel, invoiceName]));
 					}
 				} else {
 					uiStore.showSuccess(invoiceName, invoiceTotal, paidAmount);
-					showSuccess(__("Invoice {0} created successfully", [invoiceName]));
+					const docTypeLabel = cartStore.targetDoctype === "Sales Order" ? "Sales Order" : "Invoice";
+					showSuccess(__("{0} {1} created successfully", [docTypeLabel, invoiceName]));
 				}
 			}
 		}

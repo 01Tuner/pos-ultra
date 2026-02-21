@@ -31,6 +31,7 @@
 <script setup>
 import { computed } from 'vue'
 import { Dialog, Button, FeatherIcon } from 'frappe-ui'
+import { usePOSSettingsStore } from '@/stores/posSettings'
 
 const props = defineProps({
   modelValue: {
@@ -46,16 +47,29 @@ const open = computed({
   set: (value) => emit('update:modelValue', value),
 })
 
-const reports = [
-  {
-    label: __('Sales Register'),
-    route: '/app/query-report/Sales%20Register',
-    icon: 'file-text'
-  },
-  {
-    label: __('Item-wise Sales Register'),
-    route: '/app/query-report/Item-wise%20Sales%20Register',
-    icon: 'package'
+const settingsStore = usePOSSettingsStore()
+
+const reports = computed(() => {
+  const storeReports = settingsStore.reports
+  if (storeReports && storeReports.length > 0) {
+    return storeReports
   }
-]
+  return [
+    {
+      label: __('Sales Register'),
+      route: '/app/query-report/Sales%20Register',
+      icon: 'file-text'
+    },
+    {
+      label: __('Item-wise Sales Register'),
+      route: '/app/query-report/Item-wise%20Sales%20Register',
+      icon: 'package'
+    },
+    {
+      label: __('POS Register'),
+      route: '/app/query-report/POS%20Register',
+      icon: 'list'
+    }
+  ]
+})
 </script>

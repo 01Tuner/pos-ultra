@@ -154,6 +154,8 @@
         :currency="currency"
         @print-dn="handlePrintDN"
         @create-invoice="handleCreateInvoice"
+        @open-invoice="(name) => emit('open-invoice', name)"
+        @open-sales-order="(name) => emit('open-sales-order', name)"
     />
 
 </template>
@@ -177,7 +179,7 @@ const props = defineProps({
 	currency: String
 });
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "open-invoice", "open-sales-order"]);
 
 const { formatDate } = useFormatters();
 const { showSuccess, showError } = useToast();

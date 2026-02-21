@@ -141,6 +141,8 @@
         @print-order="handlePrintOrder"
         @order-cancelled="handleOrderCancelled"
 		@invoice-created="handleClose"
+        @open-invoice="(name) => emit('open-invoice', name)"
+        @open-delivery-note="(name) => emit('open-delivery-note', name)"
     />
 
 	<!-- Payment Dialog -->
@@ -178,7 +180,7 @@ const props = defineProps({
     currency: String
 });
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "open-invoice", "open-delivery-note"]);
 
 const { formatDate } = useFormatters();
 const { showSuccess, showError } = useToast();

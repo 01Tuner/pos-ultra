@@ -54,7 +54,7 @@
 						<img
 							:src="supportedLocales[locale]?.flagUrlSvg"
 							:alt="supportedLocales[locale]?.name"
-							class="w-5 h-3.5 object-cover rounded-sm shadow-sm"
+							class="w-5 h-3.5 object-cover rounded-sm shadow-sm hidden"
 						/>
 						<svg
 							class="w-4 h-4 text-gray-400 transition-transform"
@@ -82,11 +82,6 @@
 							? 'bg-blue-50 text-blue-700'
 							: 'text-gray-600 hover:bg-gray-100'"
 					>
-						<img
-							:src="config.flagUrlSvg"
-							:alt="config.name"
-							class="w-5 h-3.5 object-cover rounded-sm shadow-sm ms-6"
-						/>
 						<span class="flex-1">{{ config.nativeName }}</span>
 						<svg
 							v-if="locale === code"

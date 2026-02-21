@@ -42,7 +42,51 @@
 							</div>
 						</div>
 						<div class="flex flex-col sm:items-end gap-3">
+                            <!-- Action Buttons -->
                             <div class="flex gap-2">
+                                <Dropdown
+                                    v-if="orderData && orderData.status !== 'Completed' && orderData.status !== 'Cancelled'"
+                                    :options="[
+                                        {
+                                            label: __('Invoice'),
+                                            icon: 'file-text',
+                                            onClick: handleCreateInvoice
+                                        },
+                                        ...(allowDeliveryNote ? [{
+                                            label: __('Delivery Note'),
+                                            icon: 'truck',
+                                            onClick: handleCreateDeliveryNote
+                                        }] : [])
+                                    ]"
+                                >
+                                    <template #default="{ open }">
+                                        <Button
+                                            variant="subtle"
+                                            theme="gray"
+                                            size="sm"
+                                            class="shadow-sm border border-gray-200"
+                                        >
+                                            <template #prefix>
+                                                <FeatherIcon name="plus" class="w-4 h-4" />
+                                            </template>
+                                            {{ __('Create') }}
+                                            <template #suffix>
+                                                <FeatherIcon name="chevron-down" class="w-4 h-4 ml-1 transition-transform" :class="{ 'rotate-180': open }" />
+                                            </template>
+                                        </Button>
+                                    </template>
+                                </Dropdown>
+                                <Button
+                                    v-if="orderData && canCancel(orderData)"
+                                    size="sm"
+                                    theme="red"
+                                    variant="subtle"
+                                    :loading="cancelling"
+                                    class="shadow-sm border border-red-200"
+                                    @click="handleCancel"
+                                >
+                                    {{ __('Cancel') }}
+                                </Button>
                                 <Button
                                     size="sm"
                                     variant="subtle"
@@ -52,16 +96,6 @@
                                         <FeatherIcon name="printer" class="w-4 h-4" />
                                     </template>
                                     {{ __('Print') }}
-                                </Button>
-                                <Button
-                                    v-if="orderData && canCancel(orderData)"
-                                    size="sm"
-                                    theme="red"
-                                    variant="subtle"
-                                    :loading="cancelling"
-                                    @click="handleCancel"
-                                >
-                                    {{ __('Cancel') }}
                                 </Button>
                             </div>
 							<div class="text-start sm:text-end">
@@ -217,32 +251,10 @@
 			</div>
 		</template>
 		<template #actions>
-			<div class="flex justify-between items-center w-full">
+			<div class="flex justify-end items-center w-full">
 				<Button variant="subtle" @click="show = false">
 					{{ __('Close') }}
 				</Button>
-				<div class="flex gap-2">
-                    <Button 
-                        v-if="orderData && orderData.docstatus === 1 && orderData.status !== 'Completed' && orderData.status !== 'Cancelled'"
-                        variant="subtle"
-                        @click="handleCreateInvoice"
-                    >
-                        <template #prefix>
-                            <FeatherIcon name="file-text" class="w-4 h-4" />
-                        </template>
-                        {{ __('Create Invoice') }}
-                    </Button>
-                    <Button 
-                        v-if="orderData && orderData.docstatus === 1 && orderData.status !== 'Completed' && orderData.status !== 'Cancelled'"
-                        variant="solid"
-                        @click="handleCreateDeliveryNote"
-                    >
-                        <template #prefix>
-                            <FeatherIcon name="truck" class="w-4 h-4" />
-                        </template>
-                        {{ __('Create Delivery Note') }}
-                    </Button>
-				</div>
 			</div>
 		</template>
 	</Dialog>
@@ -255,13 +267,16 @@
 import { useFormatters } from "@/composables/useFormatters"
 import { formatCurrency as formatCurrencyUtil } from "@/utils/currency"
 import { logger } from "@/utils/logger"
-import { Button, Dialog, call, FeatherIcon } from "frappe-ui"
-import { ref, watch } from "vue"
+import { Button, Dialog, call, FeatherIcon, Dropdown } from "frappe-ui"
+import { ref, watch, computed } from "vue"
 import { useToast } from "@/composables/useToast"
 
 import { usePOSCartStore } from "@/stores/posCart"
+import { usePOSSettingsStore } from "@/stores/posSettings"
 
 const cartStore = usePOSCartStore()
+const settingsStore = usePOSSettingsStore()
+const allowDeliveryNote = computed(() => settingsStore.enableDeliveryNote)
 
 const log = logger.create('SalesOrderDetailDialog')
 const { formatDate, formatTime } = useFormatters()
@@ -281,7 +296,7 @@ function formatCurrency(amount) {
 	return formatCurrencyUtil(Number.parseFloat(amount || 0), props.currency)
 }
 
-const emit = defineEmits(["update:modelValue", "print-order", "order-cancelled", "invoice-created", "open-invoice"])
+const emit = defineEmits(["update:modelValue", "print-order", "order-cancelled", "invoice-created", "open-invoice", "open-delivery-note"])
 
 const show = ref(props.modelValue)
 const loading = ref(false)
@@ -483,14 +498,9 @@ async function handleCreateDeliveryNote() {
 
 function openDocument(doctype, name) {
     if (doctype === 'Sales Invoice') {
-        // Emit event to open invoice detail in POS context if possible, or open in new tab
-        // Since we are inside SalesOrderDetailDialog, we might need a way to open InvoiceDetailDialog
-        // For now, let's try to emit an event that the parent can handle, or open standard desk view
-        
-        // Option 1: Open in standard desk view
-         const slug = doctype.toLowerCase().trim().replace(/\s+/g, '-')
-         const url = `/app/${slug}/${name}`
-         window.open(url, '_blank')
+        emit('open-invoice', name)
+    } else if (doctype === 'Delivery Note') {
+        emit('open-delivery-note', name)
     } else {
         const slug = doctype.toLowerCase().trim().replace(/\s+/g, '-')
         const url = `/app/${slug}/${name}`

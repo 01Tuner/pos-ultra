@@ -57,21 +57,33 @@
 							</div>
                             <!-- Action Buttons -->
                             <div class="flex gap-2">
-                                <Button
-                                    v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled' && invoiceData.docstatus === 1 && !invoiceData.update_stock"
-                                    variant="subtle"
-                                    theme="gray"
-                                    size="sm"
-                                    @click="handleCreateDeliveryNote"
-                                    class="shadow-sm border border-gray-200"
+                                <Dropdown
+                                    v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled' && invoiceData.docstatus === 1 && !invoiceData.update_stock && allowDeliveryNote"
+                                    :options="[
+                                        {
+                                            label: __('Delivery Note'),
+                                            icon: 'truck',
+                                            onClick: handleCreateDeliveryNote
+                                        }
+                                    ]"
                                 >
-                                    <template #prefix>
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
-                                        </svg>
+                                    <template #default="{ open }">
+                                        <Button
+                                            variant="subtle"
+                                            theme="gray"
+                                            size="sm"
+                                            class="shadow-sm border border-gray-200"
+                                        >
+                                            <template #prefix>
+                                                <FeatherIcon name="plus" class="w-4 h-4" />
+                                            </template>
+                                            {{ __('Create') }}
+                                            <template #suffix>
+                                                <FeatherIcon name="chevron-down" class="w-4 h-4 ml-1 transition-transform" :class="{ 'rotate-180': open }" />
+                                            </template>
+                                        </Button>
                                     </template>
-                                    {{ __('Create Delivery Note') }}
-                                </Button>
+                                </Dropdown>
                                 <Button
                                     v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled' && allowReturn"
                                     variant="subtle"
@@ -440,7 +452,7 @@ import { formatCurrency as formatCurrencyUtil } from "@/utils/currency"
 import { printPaymentReceipt } from "@/utils/printInvoice"
 import { getInvoiceStatusColor } from "@/utils/invoice"
 import { logger } from "@/utils/logger"
-import { Button, Dialog, call } from "frappe-ui"
+import { Button, Dialog, call, FeatherIcon, Dropdown } from "frappe-ui"
 import { ref, watch, nextTick, computed } from "vue"
 import { usePOSSettingsStore } from "@/stores/posSettings"
 import { usePOSCartStore } from "@/stores/posCart"
@@ -449,6 +461,7 @@ import { useToast } from "@/composables/useToast"
 const settingsStore = usePOSSettingsStore()
 const cartStore = usePOSCartStore()
 const allowReturn = computed(() => settingsStore.allowReturn)
+const allowDeliveryNote = computed(() => settingsStore.enableDeliveryNote)
 
 const { showSuccess, showError } = useToast()
 const log = logger.create('InvoiceDetailDialog')
@@ -468,7 +481,7 @@ function formatCurrency(amount) {
 	return formatCurrencyUtil(Number.parseFloat(amount || 0), props.currency)
 }
 
-const emit = defineEmits(["update:modelValue", "print-invoice", "make-payment", "return-invoice", "open-invoice"])
+const emit = defineEmits(["update:modelValue", "print-invoice", "make-payment", "return-invoice", "open-invoice", "open-sales-order", "open-delivery-note"])
 
 function handlePayment() {
     if (!invoiceData.value) return
@@ -659,6 +672,10 @@ function openDocument(payment) {
 
     if (payment.voucher_type === 'Sales Invoice') {
         emit('open-invoice', payment.voucher_no)
+    } else if (payment.voucher_type === 'Sales Order') {
+        emit('open-sales-order', payment.voucher_no)
+    } else if (payment.voucher_type === 'Delivery Note') {
+        emit('open-delivery-note', payment.voucher_no)
     } else {
         // Convert DocType to slug (e.g., "Payment Entry" -> "payment-entry")
         const slug = payment.voucher_type.toLowerCase().trim().replace(/\s+/g, '-')

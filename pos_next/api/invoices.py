@@ -580,7 +580,7 @@ def update_invoice(data):
         # Check all items for delivery_note link
         if invoice_doc.items:
             for item in invoice_doc.items:
-                if item.delivery_note:
+                if item.get("delivery_note"):
                     invoice_doc.update_stock = 0
                     break
 
@@ -1073,7 +1073,7 @@ def submit_invoice(invoice=None, data=None):
         has_delivery_note = False
         if invoice_doc.items:
             for item in invoice_doc.items:
-                if item.delivery_note:
+                if item.get("delivery_note"):
                     has_delivery_note = True
                     break
         

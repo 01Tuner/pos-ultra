@@ -36,10 +36,51 @@
 								</div>
 							</div>
 						</div>
-						<div class="text-start sm:text-end">
-							<div class="text-xs text-gray-500 mb-1">{{ __('Grand Total') }}</div>
-							<div class="text-xl md:text-2xl font-bold text-blue-600">
-								{{ formatCurrency(dnData.grand_total) }}
+						<div class="flex flex-col sm:items-end gap-3">
+                            <div class="flex gap-2">
+                                <Dropdown
+                                    v-if="dnData && dnData.status !== 'Completed' && dnData.status !== 'Cancelled' && dnData.docstatus === 1"
+                                    :options="[
+                                        {
+                                            label: __('Invoice'),
+                                            icon: 'file-text',
+                                            onClick: handleCreateInvoice
+                                        }
+                                    ]"
+                                >
+                                    <template #default="{ open }">
+                                        <Button
+                                            variant="subtle"
+                                            theme="gray"
+                                            size="sm"
+                                            class="shadow-sm border border-gray-200"
+                                        >
+                                            <template #prefix>
+                                                <FeatherIcon name="plus" class="w-4 h-4" />
+                                            </template>
+                                            {{ __('Create') }}
+                                            <template #suffix>
+                                                <FeatherIcon name="chevron-down" class="w-4 h-4 ml-1 transition-transform" :class="{ 'rotate-180': open }" />
+                                            </template>
+                                        </Button>
+                                    </template>
+                                </Dropdown>
+                                <Button
+                                    size="sm"
+                                    variant="subtle"
+                                    @click="handlePrint"
+                                >
+                                    <template #prefix>
+                                        <FeatherIcon name="printer" class="w-4 h-4" />
+                                    </template>
+                                    {{ __('Print') }}
+                                </Button>
+                            </div>
+							<div class="text-start sm:text-end">
+								<div class="text-xs text-gray-500 mb-1">{{ __('Grand Total') }}</div>
+								<div class="text-xl md:text-2xl font-bold text-blue-600">
+									{{ formatCurrency(dnData.grand_total) }}
+								</div>
 							</div>
 						</div>
 					</div>
@@ -188,27 +229,10 @@
 			</div>
 		</template>
 		<template #actions>
-			<div class="flex justify-between items-center w-full">
+			<div class="flex justify-end items-center w-full">
 				<Button variant="subtle" @click="show = false">
 					{{ __('Close') }}
 				</Button>
-				<div class="flex gap-2">
-                    <Button
-                        v-if="dnData && dnData.status !== 'Completed' && dnData.status !== 'Cancelled' && dnData.docstatus === 1"
-                        variant="solid"
-                        @click="handleCreateInvoice"
-                    >
-                        {{ __('Create Invoice') }}
-                    </Button>
-					<Button @click="handlePrint">
-						<template #prefix>
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-							</svg>
-						</template>
-						{{ __('Print') }}
-					</Button>
-				</div>
 			</div>
 		</template>
 	</Dialog>
@@ -218,7 +242,7 @@
 import { useFormatters } from "@/composables/useFormatters"
 import { formatCurrency as formatCurrencyUtil } from "@/utils/currency"
 import { logger } from "@/utils/logger"
-import { Button, Dialog, call } from "frappe-ui"
+import { Button, Dialog, call, FeatherIcon, Dropdown } from "frappe-ui"
 import { ref, watch, nextTick } from "vue"
 import { useToast } from "@/composables/useToast"
 
@@ -240,7 +264,7 @@ function formatCurrency(amount) {
 	return formatCurrencyUtil(Number.parseFloat(amount || 0), props.currency)
 }
 
-const emit = defineEmits(["update:modelValue", "print-dn", "create-invoice"])
+const emit = defineEmits(["update:modelValue", "print-dn", "create-invoice", "open-invoice", "open-sales-order"])
 
 const show = ref(props.modelValue)
 const loading = ref(false)
@@ -248,9 +272,9 @@ const dnData = ref(null)
 
 function openDocument(doctype, name) {
     if (doctype === 'Sales Invoice') {
-         const slug = doctype.toLowerCase().trim().replace(/\s+/g, '-')
-         const url = `/app/${slug}/${name}`
-         window.open(url, '_blank')
+        emit('open-invoice', name)
+    } else if (doctype === 'Sales Order') {
+        emit('open-sales-order', name)
     } else {
         const slug = doctype.toLowerCase().trim().replace(/\s+/g, '-')
         const url = `/app/${slug}/${name}`
