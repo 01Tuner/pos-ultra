@@ -11,12 +11,8 @@
 				<LoadingIndicator class="w-4 h-4" />
 			</template>
 			<template v-else>
-				<img
-					:src="localeConfig.flagUrlSvg"
-					:alt="localeConfig.name"
-					class="w-5 h-3.5 sm:w-6 sm:h-4 object-cover rounded-sm shadow-sm"
-				/>
-				<span class="hidden sm:inline text-xs sm:text-sm">{{ localeConfig.nativeName }}</span>
+
+				<span class="text-xs sm:text-sm">{{ localeConfig.nativeName }}</span>
 				<FeatherIcon
 					name="chevron-down"
 					class="w-3 h-3 sm:w-4 sm:h-4 transition-transform text-gray-500"
@@ -51,12 +47,7 @@
 						]"
 						role="menuitem"
 					>
-						<img
-							:src="config.flagUrlSvg"
-							:alt="config.name"
-							class="w-6 h-4 object-cover rounded-sm shadow-sm"
-							:class="config.dir === 'rtl' ? 'ms-3' : 'me-3'"
-						/>
+
 						<span class="flex-1" :class="config.dir === 'rtl' ? 'text-end' : 'text-start'">
 							{{ config.nativeName }}
 						</span>

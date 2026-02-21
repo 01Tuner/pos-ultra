@@ -759,7 +759,10 @@ export function useInvoice() {
 			type: p.type,
 		}))
 		invoiceData.is_pos = 1
-		invoiceData.update_stock = 1
+
+		// If any item is linked to a delivery note, stock is already updated
+		const hasDeliveryNote = rawItems.some(item => !!item.delivery_note || !!item.dn_detail)
+		invoiceData.update_stock = hasDeliveryNote ? 0 : 1
 		// }
 
 		if (targetDoctype === "Sales Order") {
@@ -821,7 +824,10 @@ export function useInvoice() {
 						amount: p.amount,
 						type: p.type,
 					}))
-					invoiceData.update_stock = 1
+
+					// If any item is linked to a delivery note, stock is already updated
+					const hasDeliveryNote = rawItems.some(item => !!item.delivery_note || !!item.dn_detail)
+					invoiceData.update_stock = hasDeliveryNote ? 0 : 1
 				}
 
 				invoiceData.is_pos = 1

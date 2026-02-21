@@ -585,3 +585,84 @@ export async function printSalesOrderByName(orderName) {
 		throw error
 	}
 }
+
+/**
+* Print Delivery Note by name
+* @param {string} dnName - The name of the delivery note
+*/
+export async function printDeliveryNoteByName(dnName) {
+	try {
+		if (!dnName) {
+			throw new Error("Delivery Note name is required")
+		}
+
+		const params = new URLSearchParams({
+			doctype: "Delivery Note",
+			name: dnName,
+			trigger_print: 1,
+			no_letterhead: 0,
+			_t: Date.now(), // Cache buster
+		})
+
+		const printUrl = `/printview?${params.toString()}`
+		const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
+
+		if (!printWindow) {
+			throw new Error(
+				"Failed to open print window. Please check your popup blocker settings.",
+			)
+		}
+
+		return true
+	} catch (error) {
+		log.error("Error printing Delivery Note:", error)
+		throw error
+	}
+}
+
+/**
+ * Print Payment Entry linked to a Sales Invoice.
+ * Looks up the Payment Entry created for the POS invoice and opens its print view.
+ * Falls back to printing the Sales Invoice if no Payment Entry is found.
+ * @param {string} invoiceName - The Sales Invoice name
+ */
+export async function printPaymentEntryByInvoiceName(invoiceName) {
+	try {
+		if (!invoiceName) {
+			throw new Error("Invoice name is required")
+		}
+
+		// Look up Payment Entry linked to this Sales Invoice
+		const results = await call("frappe.client.get_list", {
+			doctype: "Payment Entry",
+			filters: [
+				["Payment Entry Reference", "reference_name", "=", invoiceName],
+				["Payment Entry Reference", "reference_doctype", "=", "Sales Invoice"],
+			],
+			fields: ["name"],
+			limit: 1,
+		})
+
+		if (results && results.length > 0) {
+			const paymentEntryName = results[0].name
+			const params = new URLSearchParams({
+				doctype: "Payment Entry",
+				name: paymentEntryName,
+				trigger_print: 1,
+				no_letterhead: 0,
+				_t: Date.now(),
+			})
+			const printUrl = `/printview?${params.toString()}`
+			const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
+			if (!printWindow) throw new Error("Popup blocked")
+			return true
+		}
+
+		// No Payment Entry found — fall back to Sales Invoice print
+		log.warn(`No Payment Entry found for ${invoiceName}, falling back to invoice print`)
+		return await printInvoiceByName(invoiceName)
+	} catch (error) {
+		log.error("Error printing Payment Entry:", error)
+		throw error
+	}
+}

@@ -1231,8 +1231,10 @@ const { formatQuantity } = useFormatters(); // Quantity formatting utilities
 async function handleProceedToPayment() {
 	if (cartStore.isDeliveryNoteMode) {
 		try {
-			await cartStore.submitInvoice(cartStore.targetDoctype);
-			// Show success message if needed, or rely on posCart logic
+			const result = await cartStore.submitInvoice(cartStore.targetDoctype);
+			if (result) {
+				emit("delivery-note-submitted", result);
+			}
 		} catch (error) {
 			console.error("Error submitting delivery note:", error);
 			const errorContext = parseError(error);
@@ -1313,6 +1315,7 @@ const emit = defineEmits([
 	"edit-customer", // (customer) - Open edit customer dialog
 	"create-customer", // (searchText) - Open create customer dialog
 	"proceed-to-payment", // () - Navigate to payment screen
+	"delivery-note-submitted", // (result) - Delivery note submitted successfully
 	"clear-cart", // () - Clear all items from cart
 	"save-draft", // () - Save current cart as draft/hold order
 	"apply-coupon", // () - Open coupon application dialog

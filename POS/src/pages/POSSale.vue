@@ -181,7 +181,8 @@
 								@view-shift="uiStore.showOpenShiftDialog = true"
 								@show-drafts="uiStore.showDraftDialog = true"
 								@show-history="uiStore.showHistoryDialog = true"
-								@show-return="uiStore.showReturnDialog = true" @close-shift="handleCloseShift()" />
+								@show-return="uiStore.showReturnDialog = true" @close-shift="handleCloseShift()"
+								@delivery-note-submitted="handleDeliveryNoteSubmitted" />
 						</div>
 					</keep-alive>
 
@@ -355,7 +356,8 @@
 				@return-invoice="handleReturnInvoiceFromDetail"
 				@open-invoice="(name) => selectedInvoiceForView = name"
                 @open-sales-order="handleViewSalesOrder"
-                @open-delivery-note="handleViewDeliveryNote" />
+                @open-delivery-note="handleViewDeliveryNote"
+                @delivery-note-prepared="handleDeliveryNotePrepared" />
 
             <!-- Standalone Sales Order Detail Dialog -->
             <SalesOrderDetailDialog
@@ -364,6 +366,8 @@
                 :pos-profile="shiftStore.profileName"
                 :currency="shiftStore.profileCurrency"
                 @print-order="handlePrintOrder"
+                @invoice-created="showSalesOrderManagement = false"
+                @delivery-note-prepared="showSalesOrderManagement = false"
                 @open-invoice="handleViewInvoiceFallback"
                 @open-delivery-note="handleViewDeliveryNote"
             />
@@ -508,7 +512,7 @@
 
 			<!-- Success Dialog -->
 			<Dialog v-model="uiStore.showSuccessDialog"
-				:options="{ title: __('Invoice Created Successfully'), size: 'md' }">
+				:options="{ title: uiStore.lastDocType === 'Sales Order' ? __('Sales Order Created Successfully') : (uiStore.lastDocType === 'Delivery Note' ? __('Delivery Note Created Successfully') : __('Invoice Created Successfully')), size: 'md' }">
 				<template #body-content>
 					<div class="text-center py-6">
 						<div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
@@ -518,11 +522,9 @@
 							</svg>
 						</div>
 						<h3 class="mt-4 text-lg font-medium text-gray-900">
-							{{
-								__("Invoice {0} created successfully!", [uiStore.lastInvoiceName])
-							}}
+							{{ uiStore.lastDocType === 'Sales Order' ? __("Sales Order {0} created successfully!", [uiStore.lastInvoiceName]) : (uiStore.lastDocType === 'Delivery Note' ? __("Delivery Note {0} created successfully!", [uiStore.lastInvoiceName]) : __("Invoice {0} created successfully!", [uiStore.lastInvoiceName])) }}
 						</h3>
-						<p class="mt-2 text-sm text-gray-500">
+						<p class="mt-2 text-sm text-gray-500" v-if="uiStore.lastDocType === 'Sales Invoice'">
 							{{ __("Paid: {0}", [formatCurrency(uiStore.lastPaidAmount)]) }}
 						</p>
 					</div>
@@ -534,11 +536,17 @@
 						</Button>
 						<Button variant="solid" theme="blue" @click="
 							() => {
-								handlePrintInvoice({ name: uiStore.lastInvoiceName });
+                                if (uiStore.lastDocType === 'Sales Order') {
+                                    import('@/utils/printInvoice.js').then(m => m.printSalesOrderByName(uiStore.lastInvoiceName));
+                                } else if (uiStore.lastDocType === 'Delivery Note') {
+                                    import('@/utils/printInvoice.js').then(m => m.printDeliveryNoteByName(uiStore.lastInvoiceName));
+                                } else {
+								    handlePrintInvoice({ name: uiStore.lastInvoiceName });
+                                }
 								uiStore.showSuccessDialog = false;
 							}
 						">
-							{{ __("Print Invoice") }}
+							{{ uiStore.lastDocType === 'Sales Order' ? __("Print Order") : (uiStore.lastDocType === 'Delivery Note' ? __("Print Note") : __("Print Invoice")) }}
 						</Button>
 					</div>
 				</template>
@@ -626,7 +634,7 @@ import { useUserData } from "@/data/user";
 import { parseError } from "@/utils/errorHandler";
 import { offlineWorker } from "@/utils/offline/workerClient";
 import { cacheInvoiceHistory, getCachedInvoiceHistory } from "@/utils/offline/sync";
-import { printInvoice, printInvoiceByName, printSalesOrderByName } from "@/utils/printInvoice";
+import { printInvoice, printInvoiceByName, printSalesOrderByName, printDeliveryNoteByName, printPaymentEntryByInvoiceName } from "@/utils/printInvoice";
 import { Button, Dialog, createResource } from "frappe-ui";
 import { call } from "@/utils/apiWrapper";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
@@ -787,7 +795,17 @@ async function handleInvoicePaymentCompleted(paymentData) {
 
 		showSuccess(__("Payment added successfully"));
 		showInvoicePaymentDialog.value = false;
-        
+
+		// Auto-print receipt after payment if enabled
+		if (shiftStore.autoPrintEnabled) {
+			try {
+				await handlePrintInvoice({ name: selectedInvoiceForPayment.value.name });
+			} catch (printError) {
+				log.error("Auto-print after payment failed:", printError);
+				showWarning(__("Payment recorded but print failed"));
+			}
+		}
+
         // Refresh data
         loadInvoiceHistoryData();
         // Close detail view as state changed
@@ -829,10 +847,29 @@ async function handlePrintOrder(order) {
 
 async function handlePrintDN(dn) {
     try {
-         const printUrl = `/printview?doctype=Delivery%20Note&name=${dn.name}&format=Standard`;
-         window.open(printUrl, '_blank');
+        await printDeliveryNoteByName(dn.name);
     } catch (error) {
-         console.error("Print failed", error);
+        console.error("Print failed", error);
+        const printUrl = `/printview?doctype=Delivery%20Note&name=${dn.name}&format=Standard`;
+        window.open(printUrl, '_blank');
+    }
+}
+
+async function handleDeliveryNoteSubmitted(result) {
+    const dnName = result?.name || result?.message?.name;
+    if (!dnName) return;
+
+    if (shiftStore.autoPrintEnabled) {
+        try {
+            await printDeliveryNoteByName(dnName);
+            showSuccess(__("Delivery Note {0} created and sent to printer", [dnName]));
+        } catch (error) {
+            log.error("Auto-print error for Delivery Note:", error);
+            showWarning(__("Delivery Note {0} created but print failed", [dnName]));
+        }
+    } else {
+        uiStore.showSuccess(dnName, result?.grand_total || 0, 0, "Delivery Note");
+        showSuccess(__("Delivery Note {0} created successfully", [dnName]));
     }
 }
 
@@ -1663,6 +1700,7 @@ async function handlePaymentCompleted(paymentData) {
 				const invoiceName = result.name || result.message?.name || __("Unknown");
 				const invoiceTotal = result.grand_total || result.total || 0;
 				const paidAmount = paymentData.paid_amount || invoiceTotal;
+				const targetDoctype = cartStore.targetDoctype;
 
 				uiStore.showPaymentDialog = false;
 				cartStore.clearCart();
@@ -1684,21 +1722,24 @@ async function handlePaymentCompleted(paymentData) {
 
 				if (shiftStore.autoPrintEnabled) {
 					try {
-						if (cartStore.targetDoctype === "Sales Order") {
+						if (targetDoctype === "Sales Order") {
 							await printSalesOrderByName(invoiceName);
 							showSuccess(__("Sales Order {0} created and sent to printer", [invoiceName]));
+						} else if (targetDoctype === "Delivery Note") {
+							await printDeliveryNoteByName(invoiceName);
+							showSuccess(__("Delivery Note {0} created and sent to printer", [invoiceName]));
 						} else {
-							await handlePrintInvoice({ name: invoiceName });
-							showSuccess(__("Invoice {0} created and sent to printer", [invoiceName]));
+							await printPaymentEntryByInvoiceName(invoiceName);
+							showSuccess(__("Payment for {0} sent to printer", [invoiceName]));
 						}
 					} catch (error) {
 						log.error("Auto-print error:", error);
-						const docTypeLabel = cartStore.targetDoctype === "Sales Order" ? "Sales Order" : "Invoice";
+						const docTypeLabel = targetDoctype === "Sales Order" ? "Sales Order" : (targetDoctype === "Delivery Note" ? "Delivery Note" : "Invoice");
 						showWarning(__("{0} {1} created but print failed", [docTypeLabel, invoiceName]));
 					}
 				} else {
-					uiStore.showSuccess(invoiceName, invoiceTotal, paidAmount);
-					const docTypeLabel = cartStore.targetDoctype === "Sales Order" ? "Sales Order" : "Invoice";
+					uiStore.showSuccess(invoiceName, invoiceTotal, paidAmount, targetDoctype);
+					const docTypeLabel = targetDoctype === "Sales Order" ? "Sales Order" : (targetDoctype === "Delivery Note" ? "Delivery Note" : "Invoice");
 					showSuccess(__("{0} {1} created successfully", [docTypeLabel, invoiceName]));
 				}
 			}

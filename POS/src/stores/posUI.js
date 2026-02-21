@@ -43,6 +43,7 @@ export const usePOSUIStore = defineStore("posUI", () => {
 	const lastInvoiceName = ref("")
 	const lastInvoiceTotal = ref(0)
 	const lastPaidAmount = ref(0)
+	const lastDocType = ref("Sales Invoice")
 
 	// Customer dialog state
 	const initialCustomerName = ref("")
@@ -97,10 +98,11 @@ export const usePOSUIStore = defineStore("posUI", () => {
 		showErrorDialog.value = false
 	}
 
-	function showSuccess(invoiceName, total, paidAmount = null) {
+	function showSuccess(invoiceName, total, paidAmount = null, targetDoctype = "Sales Invoice") {
 		lastInvoiceName.value = invoiceName
 		lastInvoiceTotal.value = total
 		lastPaidAmount.value = paidAmount !== null ? paidAmount : total
+		lastDocType.value = targetDoctype
 		showSuccessDialog.value = true
 	}
 
@@ -196,6 +198,7 @@ export const usePOSUIStore = defineStore("posUI", () => {
 		lastInvoiceName,
 		lastInvoiceTotal,
 		lastPaidAmount,
+		lastDocType,
 		initialCustomerName,
 		mobileActiveTab,
 		windowWidth,

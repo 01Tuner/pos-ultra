@@ -565,7 +565,18 @@ def update_invoice(data):
         # Set invoice flags BEFORE calculations
         if doctype == "Sales Invoice":
             invoice_doc.is_pos = 1
-            invoice_doc.update_stock = 1
+            
+            # Default to update_stock=1 unless explicitly disabled in payload
+            # Or if this is linked to a delivery note
+            update_stock = data.get("update_stock", 1)
+            
+            if invoice_doc.get("items"):
+                for item in invoice_doc.get("items"):
+                    if item.get("delivery_note") or item.get("dn_detail"):
+                        update_stock = 0
+                        break
+            
+            invoice_doc.update_stock = update_stock
 
         # ========================================================================
         # ROUNDING CONFIGURATION
@@ -575,14 +586,6 @@ def update_invoice(data):
         # When enabled (1): Shows exact amount without rounding
         # ========================================================================
         disable_rounded = 1  # Default: disable rounding for POS (show exact amounts)
-
-        # Force update_stock = 0 if creating from Delivery Note to prevent double deduction
-        # Check all items for delivery_note link
-        if invoice_doc.items:
-            for item in invoice_doc.items:
-                if item.get("delivery_note"):
-                    invoice_doc.update_stock = 0
-                    break
 
         if pos_profile:
             try:
@@ -601,6 +604,18 @@ def update_invoice(data):
 
         # Populate missing fields (company, currency, accounts, etc.)
         invoice_doc.set_missing_values()
+
+        # ERPNext's set_missing_values -> set_pos_fields explicitly overrides update_stock 
+        # based on the POS Profile. We must restore it to prevent validation errors 
+        # when converting from Delivery Notes.
+        if doctype == "Sales Invoice":
+            final_update_stock = data.get("update_stock", 1)
+            if invoice_doc.get("items"):
+                for item in invoice_doc.get("items"):
+                    if item.get("delivery_note") or item.get("dn_detail"):
+                        final_update_stock = 0
+                        break
+            invoice_doc.update_stock = final_update_stock
 
         # Calculate totals and apply discounts (with rounding disabled)
         invoice_doc.calculate_taxes_and_totals()
@@ -991,7 +1006,14 @@ def submit_invoice(invoice=None, data=None):
 
         # Ensure update_stock is set for Sales Invoice
         if doctype == "Sales Invoice":
-            invoice_doc.update_stock = 1
+            update_stock = invoice.get("update_stock", 1)
+            # Extra safety check for delivery note items
+            if invoice_doc.get("items"):
+                for item in invoice_doc.get("items"):
+                    if item.get("delivery_note"):
+                        update_stock = 0
+                        break
+            invoice_doc.update_stock = update_stock
 
         # For return invoices, set update_outstanding_for_self = 0
         # This ensures the GL entry's against_voucher points to the original invoice,

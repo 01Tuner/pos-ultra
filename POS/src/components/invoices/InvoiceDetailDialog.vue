@@ -481,7 +481,7 @@ function formatCurrency(amount) {
 	return formatCurrencyUtil(Number.parseFloat(amount || 0), props.currency)
 }
 
-const emit = defineEmits(["update:modelValue", "print-invoice", "make-payment", "return-invoice", "open-invoice", "open-sales-order", "open-delivery-note"])
+const emit = defineEmits(["update:modelValue", "print-invoice", "make-payment", "return-invoice", "open-invoice", "open-sales-order", "open-delivery-note", "delivery-note-prepared"])
 
 function handlePayment() {
     if (!invoiceData.value) return
@@ -660,6 +660,7 @@ async function handleCreateDeliveryNote() {
         }
 
         showSuccess(__("Delivery Note prepared in Cart"))
+        emit("delivery-note-prepared")
         show.value = false
     } catch (error) {
         console.error(error)

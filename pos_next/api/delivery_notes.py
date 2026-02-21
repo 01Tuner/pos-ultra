@@ -29,6 +29,7 @@ def get_delivery_notes(pos_profile, limit=50):
             "customer",
             "customer_name",
             "posting_date as transaction_date",
+            "posting_time",
             "grand_total",
             "status",
             "currency"

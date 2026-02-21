@@ -31,8 +31,8 @@
 									<span class="ms-2 font-semibold text-gray-900">{{ dnData.customer_name || dnData.customer }}</span>
 								</div>
 								<div class="text-start">
-									<span class="text-gray-600">{{ __('Date:') }}</span>
-									<span class="ms-2 font-medium text-gray-900">{{ formatDate(dnData.transaction_date) }}</span>
+									<span class="text-gray-600">{{ __('Date & Time:') }}</span>
+									<span class="ms-2 font-medium text-gray-900">{{ formatDate(dnData.posting_date) }} {{ formatTime(dnData.posting_time) }}</span>
 								</div>
 							</div>
 						</div>
