@@ -52,8 +52,15 @@ const settingsStore = usePOSSettingsStore()
 const reports = computed(() => {
   const storeReports = settingsStore.reports
   if (storeReports && storeReports.length > 0) {
-    return storeReports
+    // Map the POS Report child table rows to display format.
+    // Each row has: report (Frappe report name) and label (optional display name).
+    return storeReports.map((row) => ({
+      label: row.label || row.report,
+      route: `/app/query-report/${encodeURIComponent(row.report)}`,
+      icon: 'bar-chart-2',
+    }))
   }
+  // Fallback to default reports when none are configured in POS Settings
   return [
     {
       label: __('Sales Register'),

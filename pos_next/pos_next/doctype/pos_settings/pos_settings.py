@@ -139,6 +139,16 @@ def create_default_settings(pos_profile):
 	doc = frappe.new_doc("POS Settings")
 	doc.pos_profile = pos_profile
 	doc.enabled = 1
+
+	# Pre-populate with the 3 standard reports
+	default_reports = [
+		{"report": "Sales Register", "label": "Sales Register"},
+		{"report": "Item-wise Sales Register", "label": "Item-wise Sales Register"},
+		{"report": "POS Register", "label": "POS Register"},
+	]
+	for r in default_reports:
+		doc.append("reports", r)
+
 	doc.insert()
 
 	return doc.as_dict()
