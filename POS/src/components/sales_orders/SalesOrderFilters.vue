@@ -249,6 +249,7 @@ const statusOptions = [
 	{ label: __("To Bill"), value: "To Bill" },
     { label: __("To Deliver and Bill"), value: "To Deliver and Bill" },
 	{ label: __("Completed"), value: "Completed" },
+	{ label: __("Cancelled"), value: "Cancelled" },
 ]
 
 // Advanced filters (customer, product, custom date)

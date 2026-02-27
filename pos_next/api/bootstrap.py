@@ -144,6 +144,21 @@ def get_pos_settings(pos_profile):
 		if not pos_settings:
 			return DEFAULT_POS_SETTINGS.copy()
 
+		# Fetch assigned reports
+		try:
+			pos_settings_doc = frappe.get_cached_doc("POS Settings", pos_settings.name)
+			reports_list = []
+			for row in pos_settings_doc.get("reports", []):
+				reports_list.append({
+					"report": row.report,
+					"label": row.label,
+					"column_break": row.column_break,
+					"roles": row.roles
+				})
+			pos_settings["reports"] = reports_list
+		except Exception:
+			pos_settings["reports"] = []
+
 		return pos_settings
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "Get POS Settings Error")

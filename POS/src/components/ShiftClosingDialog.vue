@@ -1,8 +1,8 @@
 <template>
   <Dialog v-model="open" :options="{ title: __('Close POS Shift'), size: '4xl' }">
     <template #body-content>
-      <div class="flex flex-col gap-3 md:gap-6">
-        <div v-if="closingDataResource.loading" class="text-center py-8 md:py-12">
+      <div id="shift-closing-print-area" class="flex flex-col gap-3 md:gap-6">
+        <div v-if="closingDataResource.loading" class="text-center py-8 md:py-12 no-print">
           <div class="inline-block animate-spin rounded-full h-12 w-12 md:h-16 md:w-16 border-b-4 border-blue-600"></div>
           <p class="mt-3 md:mt-4 text-base md:text-lg font-medium text-gray-600">{{ __('Loading shift data...') }}</p>
           <p class="text-xs md:text-sm text-gray-500">{{ __('Calculating totals and reconciliation...') }}</p>
@@ -471,14 +471,30 @@
 
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 order-1 sm:order-2">
           <!-- Validation Warning (only in entry mode) -->
-          <div v-if="!canSubmit && closingData && !showSuccessReport" class="text-xs md:text-sm text-yellow-600 font-medium text-center sm:text-end">
+          <div v-if="!canSubmit && closingData && !showSuccessReport" class="text-xs md:text-sm text-yellow-600 font-medium text-center sm:text-end no-print">
             {{ __('Please enter all closing amounts') }}
           </div>
 
           <!-- Success message (shown in report view) -->
-          <div v-if="showSuccessReport" class="text-xs md:text-sm text-green-600 font-medium text-center sm:text-end">
+          <div v-if="showSuccessReport" class="text-xs md:text-sm text-green-600 font-medium text-center sm:text-end no-print">
             {{ __('✓ Shift closed successfully') }}
           </div>
+
+          <!-- Print button (Only shown if data is loaded) -->
+          <Button
+            v-if="closingData"
+            variant="outline"
+            @click="printShift"
+            :disabled="submitResource.loading"
+            class="no-print"
+          >
+            <template #prefix>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+            </template>
+            {{ __('Print') }}
+          </Button>
 
           <!-- Submit/Close button (only shown in entry mode) -->
           <Button
@@ -488,6 +504,7 @@
             @click="submitClosing"
             :loading="submitResource.loading"
             :disabled="!canSubmit"
+            class="no-print"
           >
             {{ submitResource.loading ? __('Closing Shift...') : __('Close Shift') }}
           </Button>
@@ -639,6 +656,58 @@ async function submitClosing() {
 	} catch (error) {
 		console.error("Error submitting closing shift:", error)
 		errorMessage.value = 'Failed to close shift. Please verify all amounts and try again.'
+	}
+}
+
+function printShift() {
+	const printArea = document.getElementById('shift-closing-print-area')
+	if (!printArea) return
+
+	const printWindow = window.open('', '_blank', 'width=800,height=800')
+	
+	// Copy styles and links from main document to preserve Tailwind CSS
+	const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+		.map(el => el.outerHTML)
+		.join('\n')
+
+	const html = `
+<!DOCTYPE html>
+<html dir="${document.documentElement.dir || 'ltr'}">
+<head>
+	<title>${__('Shift Closing Report')}</title>
+	${styles}
+	<style>
+		body { background: white !important; padding: 20px; margin: 0; min-height: 100vh; }
+		/* Hide interactive UI elements */
+		button, .no-print { display: none !important; }
+		/* Expand any collapsed details */
+		button[aria-expanded="false"] + div { display: block !important; }
+		/* Cleanup inputs to look static */
+		input { border: 1px solid #e5e7eb !important; background: white !important; }
+		.print-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #111827; }
+	</style>
+</head>
+<body>
+	<div class="max-w-4xl mx-auto bg-white">
+		<div class="print-header">${__('Shift Close Report')}</div>
+		${printArea.outerHTML}
+	</div>
+</body>
+</html>`
+
+	printWindow.document.open()
+	printWindow.document.write(html)
+	printWindow.document.close()
+	
+	// Wait a moment for styles to apply, then trigger print
+	printWindow.onload = () => {
+		setTimeout(() => {
+			printWindow.focus()
+			printWindow.onafterprint = () => {
+				printWindow.close()
+			}
+			printWindow.print()
+		}, 500)
 	}
 }
 

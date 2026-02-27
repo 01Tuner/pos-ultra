@@ -20,8 +20,7 @@ def get_sales_orders(pos_profile, limit=50):
     sales_orders = frappe.get_all(
         "Sales Order",
         filters={
-            "pos_profile": pos_profile,
-            "docstatus": ["!=", 2]  # Exclude cancelled
+            "pos_profile": pos_profile
         },
         fields=[
             "name",

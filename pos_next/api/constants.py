@@ -32,6 +32,13 @@ POS_SETTINGS_FIELDS = [
 	"allow_sales_order",
 	"allow_select_sales_order",
 	"create_only_sales_order",
+	"allow_return_without_invoice",
+	"allow_free_batch_return",
+	"allow_print_draft_invoices",
+	"use_delivery_charges",
+	"auto_set_delivery_charges",
+	"enable_delivery_note",
+	"allow_user_to_edit_rate"
 ]
 
 # Default POS Settings values
@@ -56,4 +63,11 @@ DEFAULT_POS_SETTINGS = {
 	"allow_sales_order": 0,
 	"allow_select_sales_order": 0,
 	"create_only_sales_order": 0,
+	"allow_return_without_invoice": 0,
+	"allow_free_batch_return": 0,
+	"allow_print_draft_invoices": 0,
+	"use_delivery_charges": 0,
+	"auto_set_delivery_charges": 0,
+	"enable_delivery_note": 0,
+	"allow_user_to_edit_rate": 0
 }
