@@ -123,6 +123,8 @@ export const usePOSCartStore = defineStore("posCart", () => {
 	const suppressOfferReapply = ref(false)
 	// const currentDraftId = ref(null) // Replaced by currentInvoiceName from useInvoice
 	const targetDoctype = ref("Sales Invoice")
+	// Stores the original SO name while the user is amending it
+	const amendingOrderName = ref(null)
 
 	// Offer processing state management
 	const offerProcessingState = ref({
@@ -229,6 +231,7 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		appliedCoupon.value = null
 		// currentDraftId.value = null // Handled by clearInvoiceCart -> resetInvoice
 		targetDoctype.value = "Sales Invoice"
+		amendingOrderName.value = null
 
 		// Reset offer processing state
 		suppressOfferReapply.value = false
@@ -242,6 +245,10 @@ export const usePOSCartStore = defineStore("posCart", () => {
 
 	function setTargetDoctype(doctype) {
 		targetDoctype.value = doctype
+	}
+
+	function setAmendingOrder(name) {
+		amendingOrderName.value = name || null
 	}
 
 	const deliveryDate = ref("")
@@ -260,11 +267,88 @@ export const usePOSCartStore = defineStore("posCart", () => {
 			return
 		}
 
+		// If the user is amending a Sales Order, route to the amend API
+		// (this path is hit by the Payment Dialog flow, not createSalesOrder)
+		if (amendingOrderName.value && targetDoctype.value === 'Sales Order') {
+			return await _submitAmendedSalesOrder()
+		}
+
 		return await baseSubmitInvoice(targetDoctype.value, deliveryDate.value)
 	}
 
+	/**
+	 * Create a new Sales Order OR amend an existing one.
+	 * When amendingOrderName is set the backend will cancel/delete the old SO
+	 * and create a new amended one via the amend_sales_order API.
+	 */
 	async function createSalesOrder() {
+		if (invoiceItems.value.length === 0) {
+			showWarning(__("Cart is empty"))
+			return
+		}
+		if (!customer.value) {
+			showWarning(__("Please select a customer"))
+			return
+		}
+
+		// If we are amending a Sales Order, use the dedicated amend API
+		if (amendingOrderName.value && targetDoctype.value === 'Sales Order') {
+			return await _submitAmendedSalesOrder()
+		}
+
 		return await submitInvoice()
+	}
+
+	/**
+	 * Internal: build the new SO payload and call amend_sales_order on the backend.
+	 */
+	async function _submitAmendedSalesOrder() {
+		const { call } = await import('@/utils/apiWrapper')
+		const settingsStore2 = usePOSSettingsStore()
+		const profile = settingsStore2.posProfile
+
+		// Build items directly from cart (formatItemsForSubmission may return
+		// undefined when the cart is in amend mode due to missing invoice state)
+		const rawItems = invoiceItems.value || []
+		const items = rawItems.map(item => ({
+			item_code: item.item_code,
+			item_name: item.item_name,
+			description: item.description || item.item_name,
+			uom: item.uom,
+			qty: item.quantity ?? item.qty,
+			rate: item.rate,
+			amount: item.amount || (item.rate * (item.quantity ?? item.qty ?? 1)),
+			warehouse: item.warehouse,
+			stock_uom: item.stock_uom,
+			conversion_factor: item.conversion_factor || 1,
+			discount_percentage: item.discount_percentage || 0,
+			price_list_rate: item.price_list_rate || item.rate,
+		}))
+
+		const customerName = customer.value?.name || customer.value
+
+		const newDoc = {
+			doctype: 'Sales Order',
+			customer: customerName,
+			pos_profile: profile?.name || posProfile.value,
+			company: profile?.company,
+			currency: profile?.currency,
+			selling_price_list: profile?.selling_price_list,
+			delivery_date: deliveryDate.value || frappe.datetime.get_today(),
+			items,
+		}
+
+		const newName = await call(
+			'pos_next.api.sales_orders.amend_sales_order',
+			{ old_name: amendingOrderName.value, new_doc: newDoc }
+		)
+
+		// Reset amend state after success
+		amendingOrderName.value = null
+
+		// Return in the same format as baseSubmitInvoice so handlePaymentCompleted
+		// can read result.name correctly (returning a plain string gives "Unknown")
+		return { name: newName, grand_total: 0, doctype: 'Sales Order' }
 	}
 
 
@@ -1724,6 +1808,8 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		createSalesOrder,
 		deliveryDate,
 		setDeliveryDate,
+		amendingOrderName,
+		setAmendingOrder,
 
 		// Utilities
 		cancelPendingOfferProcessing: () => {

@@ -76,6 +76,20 @@
                                         </Button>
                                     </template>
                                 </Dropdown>
+                                <!-- Amend Button -->
+                                <Button
+                                    v-if="canAmend(orderData)"
+                                    size="sm"
+                                    theme="orange"
+                                    variant="subtle"
+                                    class="shadow-sm border border-orange-200"
+                                    @click="handleAmend"
+                                >
+                                    <template #prefix>
+                                        <FeatherIcon name="edit-2" class="w-4 h-4" />
+                                    </template>
+                                    {{ __('Amend') }}
+                                </Button>
                                 <Button
                                     v-if="orderData && canCancel(orderData)"
                                     size="sm"
@@ -296,7 +310,7 @@ function formatCurrency(amount) {
 	return formatCurrencyUtil(Number.parseFloat(amount || 0), props.currency)
 }
 
-const emit = defineEmits(["update:modelValue", "print-order", "order-cancelled", "invoice-created", "open-invoice", "open-delivery-note", "delivery-note-prepared"])
+const emit = defineEmits(["update:modelValue", "print-order", "order-cancelled", "invoice-created", "open-invoice", "open-delivery-note", "delivery-note-prepared", "amend-order"])
 
 const show = ref(props.modelValue)
 const loading = ref(false)
@@ -360,6 +374,21 @@ function getStatusColor(status) {
 
 function canCancel(order) {
     return order.status !== 'Cancelled' && order.status !== 'Completed'
+}
+
+/**
+ * Amend is allowed ONLY for Cancelled Sales Orders.
+ * Creates a new SO with amended_from pointing to the cancelled one.
+ */
+function canAmend(order) {
+    if (!order) return false
+    return order.status === 'Cancelled'
+}
+
+function handleAmend() {
+    if (!orderData.value) return
+    emit('amend-order', orderData.value)
+    show.value = false
 }
 
 async function handleCancel() {

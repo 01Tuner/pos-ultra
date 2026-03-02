@@ -370,6 +370,7 @@
                 @delivery-note-prepared="showSalesOrderManagement = false"
                 @open-invoice="handleViewInvoiceFallback"
                 @open-delivery-note="handleViewDeliveryNote"
+                @amend-order="handleAmendOrderFromStandalone"
             />
 
             <!-- Standalone Delivery Note Detail Dialog -->
@@ -842,6 +843,58 @@ async function handlePrintOrder(order) {
         console.error("Print failed", error);
         const printUrl = `/printview?doctype=Sales%20Order&name=${order.name}&format=Standard`;
         window.open(printUrl, '_blank');
+    }
+}
+
+/**
+ * Called when the user clicks "Amend" on the standalone Sales Order detail dialog.
+ * Loads the order into the POS cart so the user can edit it and save as a new SO.
+ */
+async function handleAmendOrderFromStandalone(orderData) {
+    try {
+        cartStore.clearCart()
+
+        if (orderData.customer) {
+            cartStore.setCustomer({
+                name: orderData.customer,
+                customer_name: orderData.customer_name || orderData.customer,
+            })
+        }
+
+        if (orderData.items && orderData.items.length) {
+            orderData.items.forEach(item => {
+                cartStore.addItem({
+                    item_code: item.item_code,
+                    item_name: item.item_name,
+                    description: item.description,
+                    uom: item.uom,
+                    rate: item.rate,
+                    price_list_rate: item.price_list_rate || item.rate,
+                    is_stock_item: item.is_stock_item,
+                    stock_uom: item.stock_uom,
+                    conversion_factor: item.conversion_factor,
+                    item_group: item.item_group,
+                    warehouse: item.warehouse,
+                    discount_percentage: item.discount_percentage,
+                    discount_amount: item.discount_amount,
+                }, item.qty)
+            })
+        }
+
+        cartStore.setTargetDoctype('Sales Order')
+        cartStore.setAmendingOrder(orderData.name)
+
+        if (orderData.delivery_date) {
+            cartStore.setDeliveryDate(orderData.delivery_date)
+        }
+
+        showSalesOrderDetail.value = false
+        showSalesOrderManagement.value = false
+
+        showSuccess(__("Sales Order {0} loaded for amendment", [orderData.name]))
+    } catch (error) {
+        console.error('Amend order error:', error)
+        showError(error.message || __("Failed to load Sales Order for amendment"))
     }
 }
 

@@ -141,6 +141,26 @@
 							</button>
 						</div>
 
+						<!-- Amend Sales Order Indicator -->
+						<div
+							v-else-if="cartStore.amendingOrderName && cartStore.targetDoctype === 'Sales Order'"
+							class="flex items-center justify-center bg-amber-50 border border-amber-300 rounded-xl px-3 py-1.5 shadow-sm flex-shrink-0"
+						>
+							<svg class="w-3.5 h-3.5 text-amber-600 me-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+							</svg>
+							<span class="text-xs font-bold text-amber-700 truncate max-w-[80px]">{{ cartStore.amendingOrderName }}</span>
+							<button 
+								@click="cartStore.setAmendingOrder(null); cartStore.setTargetDoctype('Sales Invoice')"
+								class="ms-2 text-amber-500 hover:text-amber-700 p-0.5 rounded hover:bg-amber-100 transition-colors flex-shrink-0"
+								:title="__('Cancel amendment')"
+							>
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+								</svg>
+							</button>
+						</div>
+
 						<!-- Document Type Card -->
 						<div
 							v-else-if="settingsStore.allowSalesOrder"
@@ -258,6 +278,26 @@
 								@click="cartStore.setTargetDoctype('Sales Invoice')" 
 								class="ms-2 text-orange-500 hover:text-orange-700 p-0.5 rounded hover:bg-orange-100 transition-colors"
 								:title="__('Cancel Delivery Note Mode')"
+							>
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+								</svg>
+							</button>
+						</div>
+
+						<!-- Amend Sales Order Indicator -->
+						<div
+							v-else-if="cartStore.amendingOrderName && cartStore.targetDoctype === 'Sales Order'"
+							class="flex items-center justify-center bg-amber-50 border border-amber-300 rounded-xl px-3 h-10 shadow-sm flex-shrink-0"
+						>
+							<svg class="w-3.5 h-3.5 text-amber-600 me-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+							</svg>
+							<span class="text-xs font-bold text-amber-700 truncate max-w-[80px]">{{ cartStore.amendingOrderName }}</span>
+							<button 
+								@click="cartStore.setAmendingOrder(null); cartStore.setTargetDoctype('Sales Invoice')"
+								class="ms-2 text-amber-500 hover:text-amber-700 p-0.5 rounded hover:bg-amber-100 transition-colors flex-shrink-0"
+								:title="__('Cancel amendment')"
 							>
 								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>

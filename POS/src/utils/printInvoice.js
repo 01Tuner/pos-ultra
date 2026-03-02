@@ -48,6 +48,9 @@ export async function printInvoice(
 			)
 		}
 
+		// Auto-close after print dialog is dismissed (Print or Cancel)
+		printWindow.addEventListener('afterprint', () => printWindow.close())
+
 		return true
 	} catch (error) {
 		log.error("Error printing with Frappe print format:", error)
@@ -455,12 +458,13 @@ export function printInvoiceCustom(invoiceData) {
 	printWindow.document.write(printContent)
 	printWindow.document.close()
 
-	// Auto print after load
+	// Auto print after load, then auto-close when done
 	printWindow.onload = () => {
 		setTimeout(() => {
 			printWindow.print()
 		}, 250)
 	}
+	printWindow.addEventListener('afterprint', () => printWindow.close())
 }
 
 function formatCurrency(amount) {
@@ -537,6 +541,8 @@ export async function printPaymentReceipt(paymentData) {
 			const printUrl = `/printview?${params.toString()}`
 			const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
 			if (!printWindow) throw new Error("Popup blocked")
+			// Auto-close after print dialog is dismissed
+			printWindow.addEventListener('afterprint', () => printWindow.close())
 		} else if (paymentData.voucher_type === "Sales Invoice") {
 			// For POS payments (Sales Invoice), print the full invoice
 			await printInvoiceByName(paymentData.voucher_no)
@@ -560,24 +566,30 @@ export async function printSalesOrderByName(orderName) {
 			throw new Error("Sales Order name is required")
 		}
 
-		// Build URL exactly as requested:
-		// /printview?doctype=Sales%20Order&name=NAME&trigger_print=1&no_letterhead=0
 		const params = new URLSearchParams({
 			doctype: "Sales Order",
 			name: orderName,
 			trigger_print: 1,
 			no_letterhead: 0,
-			_t: Date.now(), // Cache buster
+			_t: Date.now(),
 		})
 
 		const printUrl = `/printview?${params.toString()}`
-		const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
+		// Use explicit popup features to force a popup window (not a tab)
+		const printWindow = window.open(
+			printUrl,
+			'pos_print_so',
+			'width=900,height=700,toolbar=0,scrollbars=1,status=0,resizable=1'
+		)
 
 		if (!printWindow) {
 			throw new Error(
 				"Failed to open print window. Please check your popup blocker settings.",
 			)
 		}
+
+		// Auto-close after print dialog is dismissed (Print or Cancel)
+		printWindow.addEventListener('afterprint', () => printWindow.close())
 
 		return true
 	} catch (error) {
@@ -601,17 +613,25 @@ export async function printDeliveryNoteByName(dnName) {
 			name: dnName,
 			trigger_print: 1,
 			no_letterhead: 0,
-			_t: Date.now(), // Cache buster
+			_t: Date.now(),
 		})
 
 		const printUrl = `/printview?${params.toString()}`
-		const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
+		// Use explicit popup features to force a popup window (not a tab)
+		const printWindow = window.open(
+			printUrl,
+			'pos_print_dn',
+			'width=900,height=700,toolbar=0,scrollbars=1,status=0,resizable=1'
+		)
 
 		if (!printWindow) {
 			throw new Error(
 				"Failed to open print window. Please check your popup blocker settings.",
 			)
 		}
+
+		// Auto-close after print dialog is dismissed (Print or Cancel)
+		printWindow.addEventListener('afterprint', () => printWindow.close())
 
 		return true
 	} catch (error) {
@@ -655,6 +675,8 @@ export async function printPaymentEntryByInvoiceName(invoiceName) {
 			const printUrl = `/printview?${params.toString()}`
 			const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
 			if (!printWindow) throw new Error("Popup blocked")
+			// Auto-close after print dialog is dismissed
+			printWindow.addEventListener('afterprint', () => printWindow.close())
 			return true
 		}
 

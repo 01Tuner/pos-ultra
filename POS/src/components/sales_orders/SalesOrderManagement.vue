@@ -143,6 +143,7 @@
         @delivery-note-prepared="handleClose"
         @open-invoice="(name) => emit('open-invoice', name)"
         @open-delivery-note="(name) => emit('open-delivery-note', name)"
+        @amend-order="handleAmendOrder"
     />
 
 	<!-- Payment Dialog -->
@@ -173,6 +174,7 @@ import SalesOrderDetailDialog from "./SalesOrderDetailDialog.vue";
 import SalesOrderFilters from "./SalesOrderFilters.vue";
 import PaymentDialog from "@/components/sale/PaymentDialog.vue";
 import { useSalesOrderFilters } from "@/composables/useSalesOrderFilters";
+import { usePOSCartStore } from "@/stores/posCart";
 
 const props = defineProps({
 	modelValue: Boolean,
@@ -180,7 +182,9 @@ const props = defineProps({
     currency: String
 });
 
-const emit = defineEmits(["update:modelValue", "open-invoice", "open-delivery-note"]);
+const emit = defineEmits(["update:modelValue", "open-invoice", "open-delivery-note", "load-sales-order-to-cart"]);
+
+const cartStore = usePOSCartStore();
 
 const { formatDate } = useFormatters();
 const { showSuccess, showError } = useToast();
@@ -333,6 +337,65 @@ async function handleCancelOrder(order) {
         loadSalesOrders();
     } catch (error) {
          showError(error.message || __("Failed to cancel sales order"));
+    }
+}
+
+/**
+ * Load the chosen Sales Order into the POS cart for amendment.
+ * The cart store will track `amendingOrderName` so that on submit
+ * the amend_sales_order API is called instead of creating a fresh SO.
+ */
+async function handleAmendOrder(orderData) {
+    try {
+        // Clear current cart first
+        cartStore.clearCart()
+
+        // Set the customer
+        if (orderData.customer) {
+            cartStore.setCustomer({
+                name: orderData.customer,
+                customer_name: orderData.customer_name || orderData.customer,
+            })
+        }
+
+        // Load items
+        if (orderData.items && orderData.items.length) {
+            orderData.items.forEach(item => {
+                cartStore.addItem({
+                    item_code: item.item_code,
+                    item_name: item.item_name,
+                    description: item.description,
+                    uom: item.uom,
+                    rate: item.rate,
+                    price_list_rate: item.price_list_rate || item.rate,
+                    is_stock_item: item.is_stock_item,
+                    stock_uom: item.stock_uom,
+                    conversion_factor: item.conversion_factor,
+                    item_group: item.item_group,
+                    warehouse: item.warehouse,
+                    discount_percentage: item.discount_percentage,
+                    discount_amount: item.discount_amount,
+                }, item.qty)
+            })
+        }
+
+        // Tell the cart this is a Sales Order amendment
+        cartStore.setTargetDoctype('Sales Order')
+        cartStore.setAmendingOrder(orderData.name)
+
+        // Set delivery date if available
+        if (orderData.delivery_date) {
+            cartStore.setDeliveryDate(orderData.delivery_date)
+        }
+
+        showSuccess(__("Sales Order {0} loaded for amendment. Edit items and save.", [orderData.name]))
+
+        // Close the management panel so the POS cart is visible
+        handleClose()
+        emit('load-sales-order-to-cart')
+    } catch (error) {
+        console.error('Amend order error:', error)
+        showError(error.message || __("Failed to load Sales Order for amendment"))
     }
 }
 
