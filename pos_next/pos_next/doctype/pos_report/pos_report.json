@@ -6,6 +6,7 @@
     "field_order": [
         "report",
         "label",
+        "pass_pos_profile",
         "column_break",
         "roles"
     ],
@@ -23,6 +24,13 @@
             "fieldtype": "Data",
             "in_list_view": 1,
             "label": "Label"
+        },
+        {
+            "default": "1",
+            "fieldname": "pass_pos_profile",
+            "fieldtype": "Check",
+            "in_list_view": 1,
+            "label": "Pass POS Profile"
         },
         {
             "fieldname": "column_break",

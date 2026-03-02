@@ -49,6 +49,15 @@ const open = computed({
 
 const settingsStore = usePOSSettingsStore()
 
+function buildReportUrl(reportName, passPosProfile = true) {
+  const base = `/app/query-report/${encodeURIComponent(reportName)}`
+  const posProfile = settingsStore.settings.pos_profile
+  if (posProfile && passPosProfile) {
+    return `${base}?pos_profile=${encodeURIComponent(posProfile)}`
+  }
+  return base
+}
+
 const reports = computed(() => {
   const storeReports = settingsStore.reports
   if (storeReports && storeReports.length > 0) {
@@ -56,7 +65,7 @@ const reports = computed(() => {
     // Each row has: report (Frappe report name) and label (optional display name).
     return storeReports.map((row) => ({
       label: row.label || row.report,
-      route: `/app/query-report/${encodeURIComponent(row.report)}`,
+      route: buildReportUrl(row.report, row.pass_pos_profile !== 0),
       icon: 'bar-chart-2',
     }))
   }
@@ -64,17 +73,17 @@ const reports = computed(() => {
   return [
     {
       label: __('Sales Register'),
-      route: '/app/query-report/Sales%20Register',
+      route: buildReportUrl('Sales Register', true),
       icon: 'file-text'
     },
     {
       label: __('Item-wise Sales Register'),
-      route: '/app/query-report/Item-wise%20Sales%20Register',
+      route: buildReportUrl('Item-wise Sales Register', true),
       icon: 'package'
     },
     {
       label: __('POS Register'),
-      route: '/app/query-report/POS%20Register',
+      route: buildReportUrl('POS Register', true),
       icon: 'list'
     }
   ]
