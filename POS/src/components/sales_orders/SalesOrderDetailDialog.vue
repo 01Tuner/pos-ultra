@@ -47,17 +47,17 @@
                                 <Dropdown
                                     v-if="orderData && orderData.status !== 'Completed' && orderData.status !== 'Cancelled'"
                                     :options="[
-                                        {
+                                        ...(orderData.per_billed < 100 ? [{
                                             label: __('Invoice'),
                                             icon: 'file-text',
                                             onClick: handleCreateInvoice
-                                        },
-                                        ...(allowDeliveryNote ? [{
+                                        }] : []),
+                                        ...(allowDeliveryNote && orderData.per_delivered < 100 ? [{
                                             label: __('Delivery Note'),
                                             icon: 'truck',
                                             onClick: handleCreateDeliveryNote
                                         }] : [])
-                                    ]"
+                                    ].filter(Boolean)"
                                 >
                                     <template #default="{ open }">
                                         <Button
@@ -421,6 +421,11 @@ async function handleCreateInvoice() {
         // Clear existing cart
         cartStore.clearCart()
 
+        // Respect update_stock flag from backend (backend sets 0 when items are already delivered)
+        if (mappedDoc.update_stock !== undefined) {
+            cartStore.setUpdateStockOverride(mappedDoc.update_stock)
+        }
+
         // Set customer
         if (mappedDoc.customer) {
             cartStore.setCustomer({
@@ -447,13 +452,14 @@ async function handleCreateInvoice() {
                     discount_percentage: item.discount_percentage,
                     discount_amount: item.discount_amount,
                     // Reference fields
-                    sales_order: item.sales_order,
-                    against_sales_order: item.against_sales_order,
+                    sales_order: item.sales_order || item.against_sales_order,
+                    against_sales_order: item.against_sales_order || item.sales_order,
                     so_detail: item.so_detail,
                     against_sales_invoice: item.against_sales_invoice,
                     si_detail: item.si_detail,
+                    delivery_note: item.delivery_note,
                     dn_detail: item.dn_detail,
-                }, item.qty)
+                }, item.qty || item.quantity || 1)
             })
         }
 
@@ -510,8 +516,9 @@ async function handleCreateDeliveryNote() {
                     so_detail: item.so_detail,
                     against_sales_invoice: item.against_sales_invoice,
                     si_detail: item.si_detail,
+                    delivery_note: item.delivery_note,
                     dn_detail: item.dn_detail,
-                }, item.qty)
+                }, item.qty || item.quantity || 1)
             })
         }
 

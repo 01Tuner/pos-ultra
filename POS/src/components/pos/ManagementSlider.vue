@@ -21,7 +21,7 @@
 
 
 		<!-- Promotions -->
-		<button @click="handleMenuClick('promotions')" :class="[
+		<button v-if="settingsStore.allowPromotion" @click="handleMenuClick('promotions')" :class="[
 			'w-12 h-12 rounded-lg flex items-center justify-center transition-all relative group',
 			activeMenu === 'promotions'
 				? 'bg-green-100 text-green-600'

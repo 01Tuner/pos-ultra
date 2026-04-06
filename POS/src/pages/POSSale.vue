@@ -295,7 +295,8 @@
 			<!-- Generic Item Selection Dialog -->
 			<ItemSelectionDialog v-model="uiStore.showItemSelectionDialog" :item="cartStore.pendingItem"
 				:mode="cartStore.selectionMode" :pos-profile="shiftStore.profileName"
-				:currency="shiftStore.profileCurrency" @option-selected="handleOptionSelected" />
+				:currency="shiftStore.profileCurrency" :allow-edit-rate="posSettingsStore.allowEditRate"
+				@option-selected="handleOptionSelected" />
 
 			<!-- Invoice History Dialog -->
 			<InvoiceHistoryDialog v-model="uiStore.showHistoryDialog" :pos-profile="shiftStore.profileName"
@@ -322,6 +323,15 @@
 			<!-- POS Settings -->
 			<POSSettings v-model="showPOSSettings" :pos-profile="shiftStore.profileName"
 				:current-warehouse="shiftStore.profileWarehouse" @warehouse-changed="handleWarehouseChanged" />
+
+			<!-- Zero-Price Item Edit Dialog -->
+			<EditItemDialog
+				v-model="showZeroPriceEditDialog"
+				:item="zeroPriceItem"
+				:warehouses="profileWarehouses"
+				:currency="shiftStore.profileCurrency"
+				@update-item="handleZeroPriceItemConfirmed"
+			/>
 
 			<!-- Stock Lookup Dialog (Products Menu) -->
 			<WarehouseAvailabilityDialog v-model="showStockLookup" mode="search" :pos-profile="shiftStore.profileName"
@@ -613,6 +623,7 @@ import InvoiceCart from "@/components/sale/InvoiceCart.vue";
 import InvoiceHistoryDialog from "@/components/sale/InvoiceHistoryDialog.vue";
 import ItemSelectionDialog from "@/components/sale/ItemSelectionDialog.vue";
 import ItemsSelector from "@/components/sale/ItemsSelector.vue";
+import EditItemDialog from "@/components/sale/EditItemDialog.vue";
 import OffersDialog from "@/components/sale/OffersDialog.vue";
 import OfflineInvoicesDialog from "@/components/sale/OfflineInvoicesDialog.vue";
 import PaymentDialog from "@/components/sale/PaymentDialog.vue";
@@ -723,6 +734,10 @@ const showPromotionManagement = ref(false);
 
 // Settings dialog
 const showPOSSettings = ref(false);
+
+// Zero-price item edit dialog
+const showZeroPriceEditDialog = ref(false);
+const zeroPriceItem = ref(null);
 
 // Stock Lookup dialog (Products menu)
 const showStockLookup = ref(false);
@@ -1579,12 +1594,42 @@ function handleItemSelected(item, autoAdd = false) {
 
 	// Add to cart
 	try {
+		// If item has no price (rate == 0) and setting is enabled, show edit dialog
+		const itemRate = Number(item.rate || item.price_list_rate || 0);
+		if (itemRate === 0 && settingsStore.showEditItemIfNoPrice) {
+			zeroPriceItem.value = {
+				...item,
+				quantity: 1,
+				uom: item.uom || item.stock_uom,
+				warehouse: shiftStore.profileWarehouse,
+				rate: 0,
+				is_new_item: true,
+			};
+			showZeroPriceEditDialog.value = true;
+			return;
+		}
 		cartStore.addItem(item, 1, false, shiftStore.currentProfile);
 	} catch (error) {
 		uiStore.showError(
 			__("Insufficient Stock"),
 			error.message,
 			__("Item: {0}", [item.item_code])
+		);
+	}
+}
+
+async function handleZeroPriceItemConfirmed(updatedItem) {
+	// Called when cashier confirms the edit dialog for a zero-price item
+	// updatedItem already has quantity, rate, uom, warehouse etc. from the dialog
+	try {
+		cartStore.addItem(updatedItem, updatedItem.quantity || 1, false, shiftStore.currentProfile);
+		// Apply the edited rate and other details
+		await cartStore.updateItemDetails(updatedItem.item_code, updatedItem);
+	} catch (error) {
+		uiStore.showError(
+			__("Error"),
+			error.message,
+			__("Item: {0}", [updatedItem.item_code])
 		);
 	}
 }
@@ -1889,12 +1934,15 @@ async function handleOptionSelected(option) {
 				uom: option.uom,
 			});
 
+			// If the user entered a custom rate in the UOM dialog, preserve it.
+			// Otherwise fall back to the server-fetched price.
+			const apiRate = itemDetails.price_list_rate || itemDetails.rate;
 			const itemToAdd = {
 				...cartStore.pendingItem,
 				uom: option.uom,
 				conversion_factor: option.conversion_factor,
-				rate: itemDetails.price_list_rate || itemDetails.rate,
-				price_list_rate: itemDetails.price_list_rate,
+				rate: option.custom_rate ? option.rate : apiRate,
+				price_list_rate: option.custom_rate ? option.rate : itemDetails.price_list_rate,
 			};
 
 			if (itemToAdd.has_batch_no || itemToAdd.has_serial_no) {

@@ -733,7 +733,7 @@ export function useInvoice() {
 		}
 	}
 
-	async function saveDraft(targetDoctype = "Sales Invoice") {
+	async function saveDraft(targetDoctype = "Sales Invoice", options = {}) {
 		/**
 		 * Save invoice as draft (Step 1)
 		 * This creates the invoice with docstatus=0
@@ -760,9 +760,14 @@ export function useInvoice() {
 		}))
 		invoiceData.is_pos = 1
 
-		// If any item is linked to a delivery note, stock is already updated
+		// If any item is linked to a delivery note, stock is already updated.
+		// Callers can also force update_stock via options.updateStockOverride (null=auto, 0=off, 1=on).
 		const hasDeliveryNote = rawItems.some(item => !!item.delivery_note || !!item.dn_detail)
-		invoiceData.update_stock = hasDeliveryNote ? 0 : 1
+		if (options.updateStockOverride !== null && options.updateStockOverride !== undefined) {
+			invoiceData.update_stock = options.updateStockOverride
+		} else {
+			invoiceData.update_stock = hasDeliveryNote ? 0 : 1
+		}
 		// }
 
 		if (targetDoctype === "Sales Order") {
@@ -775,7 +780,7 @@ export function useInvoice() {
 		return result?.data || result
 	}
 
-	async function submitInvoice(targetDoctype = "Sales Invoice", deliveryDate = null) {
+	async function submitInvoice(targetDoctype = "Sales Invoice", deliveryDate = null, options = {}) {
 		/**
 		 * Two-step submission process with mutex protection:
 		 * 1. Create/update draft invoice
@@ -825,9 +830,14 @@ export function useInvoice() {
 						type: p.type,
 					}))
 
-					// If any item is linked to a delivery note, stock is already updated
+					// If any item is linked to a delivery note, stock is already updated.
+					// Callers can force override via options.updateStockOverride.
 					const hasDeliveryNote = rawItems.some(item => !!item.delivery_note || !!item.dn_detail)
-					invoiceData.update_stock = hasDeliveryNote ? 0 : 1
+					if (options.updateStockOverride !== null && options.updateStockOverride !== undefined) {
+						invoiceData.update_stock = options.updateStockOverride
+					} else {
+						invoiceData.update_stock = hasDeliveryNote ? 0 : 1
+					}
 				}
 
 				invoiceData.is_pos = 1

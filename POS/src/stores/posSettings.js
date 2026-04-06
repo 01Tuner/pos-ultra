@@ -62,6 +62,8 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		// Miscellaneous
 		input_qty: 0,
 		allow_negative_stock: 0,
+		allow_promotion: 0,
+		show_edit_item_if_no_price: 0, // Show Edit Item dialog when item price is 0
 		reports: [],
 		// Sales Persons
 		enable_sales_persons: "Disabled",
@@ -217,6 +219,12 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 	const allowNegativeStock = computed(() =>
 		Boolean(settings.value.allow_negative_stock),
 	)
+	const allowPromotion = computed(() =>
+		Boolean(settings.value.allow_promotion),
+	)
+	const showEditItemIfNoPrice = computed(() =>
+		Boolean(settings.value.show_edit_item_if_no_price),
+	)
 
 	// Computed - Sales Persons
 	const enableSalesPersons = computed(() =>
@@ -329,6 +337,8 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 			allow_change_posting_date: 0,
 			input_qty: 0,
 			allow_negative_stock: 0,
+			allow_promotion: 1,
+			show_edit_item_if_no_price: 0,
 			enable_sales_persons: "Disabled",
 			reports: [],
 		}
@@ -457,6 +467,8 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		// Computed - Miscellaneous
 		inputQty,
 		allowNegativeStock,
+		allowPromotion,
+		showEditItemIfNoPrice,
 
 		// Computed - Sales Persons
 		enableSalesPersons,

@@ -156,14 +156,29 @@
 						</div>
 					</div>
 
+					<!-- Rate Field (only when allowEditRate is enabled) -->
+					<div v-if="props.allowEditRate && mode === 'uom'">
+						<label class="block text-sm font-medium text-gray-700 mb-2 text-start">{{ __('Rate') }}</label>
+						<div class="relative h-10">
+							<input
+								v-model.number="localRate"
+								type="number"
+								min="0"
+								step="0.01"
+								class="w-full h-10 border border-blue-300 rounded-lg px-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50"
+								@keydown.enter="confirm"
+							/>
+						</div>
+					</div>
+
 					<!-- Price Summary -->
 					<div class="bg-blue-50 rounded-xl p-4 flex items-center justify-between">
 						<div>
 							<p class="text-sm text-gray-600">{{ __('Total') }}</p>
-							<p class="text-xs text-gray-500">{{ quantity }} × {{ formatCurrency(selectedOption?.rate || options[0]?.rate || 0) }}</p>
+							<p class="text-xs text-gray-500">{{ quantity }} × {{ formatCurrency(props.allowEditRate && localRate > 0 ? localRate : (selectedOption?.rate || options[0]?.rate || 0)) }}</p>
 						</div>
 						<p class="text-2xl font-bold text-blue-600">
-							{{ formatCurrency((selectedOption?.rate || options[0]?.rate || 0) * quantity) }}
+							{{ formatCurrency((props.allowEditRate && localRate > 0 ? localRate : (selectedOption?.rate || options[0]?.rate || 0)) * quantity) }}
 						</p>
 					</div>
 
@@ -253,6 +268,10 @@ const props = defineProps({
 		type: String,
 		default: "USD",
 	},
+	allowEditRate: {
+		type: Boolean,
+		default: false,
+	},
 })
 
 const emit = defineEmits(["update:modelValue", "option-selected"])
@@ -266,6 +285,7 @@ const loading = ref(false)
 const options = ref([])
 const selectedOption = ref(null)
 const quantity = ref(1)
+const localRate = ref(0) // Editable rate when allowEditRate is enabled
 const selectedAttributes = ref({}) // For variant attribute selection
 
 // Computed properties for dialog customization
@@ -447,6 +467,7 @@ watch([() => props.mode, () => props.item], ([, newItem]) => {
 async function loadOptions() {
 	selectedOption.value = null
 	quantity.value = props.item.resolved_qty || 1
+	localRate.value = 0 // Reset rate when dialog opens
 	selectedAttributes.value = {} // Reset attribute selection
 
 	if (props.mode === "variant") {
@@ -554,6 +575,11 @@ function confirm() {
 		const option = { ...selectedOption.value }
 		if (props.mode === "uom") {
 			option.quantity = quantity.value
+			// Override rate if allowEditRate is enabled and a custom rate was set
+			if (props.allowEditRate && localRate.value > 0) {
+				option.rate = localRate.value
+				option.custom_rate = true // Flag so parent knows to preserve this rate
+			}
 		}
 		emit("option-selected", option)
 	}

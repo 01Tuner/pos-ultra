@@ -358,6 +358,16 @@
 												:label="__('Silent Print')"
 												:description="__('Print without confirmation')"
 											/>
+											<CheckboxField
+												v-model="settings.allow_promotion"
+												:label="__('Enable Promotion')"
+												:description="__('Show the Promotions icon in the POS sidebar')"
+											/>
+											<CheckboxField
+												v-model="settings.show_edit_item_if_no_price"
+												:label="__('Show Edit Item If No Price')"
+												:description="__('Automatically open the Edit Item dialog when an item with no price (rate = 0) is added to the cart')"
+											/>
 										</div>
 									</div>
 								</div>
@@ -434,6 +444,8 @@ const settings = ref({
 	silent_print: 0,
 	allow_negative_stock: 0,
 	tax_inclusive: 0,
+	allow_promotion: 1,
+	show_edit_item_if_no_price: 0,
 })
 
 // Stock Sync Settings (localStorage persisted)

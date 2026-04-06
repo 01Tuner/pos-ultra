@@ -126,7 +126,19 @@ def make_invoice_from_sales_order(source_name):
     """Return mapped Sales Invoice doc from Sales Order without inserting."""
     from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
     doc = make_sales_invoice(source_name)
-    return doc.as_dict()
+    res = doc.as_dict()
+
+    # If any item has already been delivered (via Delivery Note),
+    # disable update_stock to avoid "over limit by Qty" errors on submission.
+    # Frappe's make_sales_invoice doesn't always set this correctly for POS.
+    has_delivered_items = any(
+        (item.get("delivered_qty") or 0) > 0
+        for item in res.get("items", [])
+    )
+    if has_delivered_items:
+        res["update_stock"] = 0
+
+    return res
 
 @frappe.whitelist()
 def make_delivery_note_from_sales_order(source_name):

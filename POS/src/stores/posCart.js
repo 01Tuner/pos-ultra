@@ -125,6 +125,8 @@ export const usePOSCartStore = defineStore("posCart", () => {
 	const targetDoctype = ref("Sales Invoice")
 	// Stores the original SO name while the user is amending it
 	const amendingOrderName = ref(null)
+	// Force update_stock override: null = auto-detect, 0 = force off, 1 = force on
+	const forceUpdateStock = ref(null)
 
 	// Offer processing state management
 	const offerProcessingState = ref({
@@ -232,6 +234,7 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		// currentDraftId.value = null // Handled by clearInvoiceCart -> resetInvoice
 		targetDoctype.value = "Sales Invoice"
 		amendingOrderName.value = null
+		forceUpdateStock.value = null
 
 		// Reset offer processing state
 		suppressOfferReapply.value = false
@@ -241,6 +244,11 @@ export const usePOSCartStore = defineStore("posCart", () => {
 
 		// Sync the empty snapshot
 		syncOfferSnapshot()
+	}
+
+	function setUpdateStockOverride(value) {
+		// value: null = auto, 0 = force off, 1 = force on
+		forceUpdateStock.value = value
 	}
 
 	function setTargetDoctype(doctype) {
@@ -273,7 +281,9 @@ export const usePOSCartStore = defineStore("posCart", () => {
 			return await _submitAmendedSalesOrder()
 		}
 
-		return await baseSubmitInvoice(targetDoctype.value, deliveryDate.value)
+		return await baseSubmitInvoice(targetDoctype.value, deliveryDate.value, {
+			updateStockOverride: forceUpdateStock.value
+		})
 	}
 
 	/**
@@ -1810,6 +1820,8 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		setDeliveryDate,
 		amendingOrderName,
 		setAmendingOrder,
+		forceUpdateStock,
+		setUpdateStockOverride,
 
 		// Utilities
 		cancelPendingOfferProcessing: () => {

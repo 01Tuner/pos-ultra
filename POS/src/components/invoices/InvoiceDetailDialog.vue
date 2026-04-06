@@ -649,13 +649,13 @@ async function handleCreateDeliveryNote() {
                     discount_percentage: item.discount_percentage,
                     discount_amount: item.discount_amount,
                     // Reference fields
-                    sales_order: item.sales_order,
-                    against_sales_order: item.against_sales_order,
+                    sales_order: item.sales_order || item.against_sales_order,
+                    against_sales_order: item.against_sales_order || item.sales_order,
                     so_detail: item.so_detail,
-                    against_sales_invoice: item.against_sales_invoice,
+                    against_sales_invoice: item.against_sales_invoice || item.sales_invoice,
                     si_detail: item.si_detail,
                     dn_detail: item.dn_detail,
-                }, item.qty)
+                }, item.qty || item.quantity || 1)
             })
         }
 
