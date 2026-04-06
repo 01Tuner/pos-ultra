@@ -663,52 +663,59 @@ function printShift() {
 	const printArea = document.getElementById('shift-closing-print-area')
 	if (!printArea) return
 
-	const printWindow = window.open('', '_blank', 'width=800,height=800')
-	
-	// Copy styles and links from main document to preserve Tailwind CSS
-	const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-		.map(el => el.outerHTML)
-		.join('\n')
+	// Collect all existing stylesheet hrefs to re-link them
+	const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+		.map(el => el.href)
+		.filter(Boolean)
 
-	const html = `
-<!DOCTYPE html>
-<html dir="${document.documentElement.dir || 'ltr'}">
-<head>
-	<title>${__('Shift Closing Report')}</title>
-	${styles}
-	<style>
-		body { background: white !important; padding: 20px; margin: 0; min-height: 100vh; }
-		/* Hide interactive UI elements */
-		button, .no-print { display: none !important; }
-		/* Expand any collapsed details */
-		button[aria-expanded="false"] + div { display: block !important; }
-		/* Cleanup inputs to look static */
-		input { border: 1px solid #e5e7eb !important; background: white !important; }
-		.print-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #111827; }
-	</style>
-</head>
-<body>
-	<div class="max-w-4xl mx-auto bg-white">
-		<div class="print-header">${__('Shift Close Report')}</div>
-		${printArea.outerHTML}
-	</div>
-</body>
-</html>`
+	// Build a temporary print container and inject it into <body>
+	const printContainerId = 'pos-shift-print-root'
+	let existing = document.getElementById(printContainerId)
+	if (existing) existing.remove()
 
-	printWindow.document.open()
-	printWindow.document.write(html)
-	printWindow.document.close()
-	
-	// Wait a moment for styles to apply, then trigger print
-	printWindow.onload = () => {
-		setTimeout(() => {
-			printWindow.focus()
-			printWindow.onafterprint = () => {
-				printWindow.close()
-			}
-			printWindow.print()
-		}, 500)
+	const container = document.createElement('div')
+	container.id = printContainerId
+	container.innerHTML = `
+		<div class="print-shift-header">${__('Shift Close Report')}</div>
+		${printArea.innerHTML}
+	`
+	document.body.appendChild(container)
+
+	// Inject a <style> tag for @media print rules
+	const styleId = 'pos-shift-print-style'
+	let styleEl = document.getElementById(styleId)
+	if (!styleEl) {
+		styleEl = document.createElement('style')
+		styleEl.id = styleId
+		document.head.appendChild(styleEl)
 	}
+	styleEl.textContent = `
+		@media print {
+			body > *:not(#${printContainerId}) { display: none !important; }
+			#${printContainerId} { display: block !important; padding: 20px; }
+			.no-print { display: none !important; }
+			button { display: none !important; }
+			input { border: 1px solid #e5e7eb !important; background: white !important; -webkit-appearance: none; }
+			.print-shift-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #111827; }
+		}
+		#${printContainerId} { display: none; }
+	`
+
+	// Trigger print and clean up afterwards
+	const cleanup = () => {
+		const el = document.getElementById(printContainerId)
+		if (el) el.remove()
+		const st = document.getElementById(styleId)
+		if (st) st.remove()
+		window.removeEventListener('afterprint', cleanup)
+	}
+	window.addEventListener('afterprint', cleanup)
+
+	setTimeout(() => {
+		window.print()
+		// Fallback cleanup in case afterprint doesn't fire (some mobile browsers)
+		setTimeout(cleanup, 2000)
+	}, 300)
 }
 
 function closeDialog() {
