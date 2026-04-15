@@ -2,7 +2,7 @@
 	<!-- Main Dialog -->
 	<Dialog
 		v-model="show"
-		:options="{ title: __('Draft Invoices'), size: 'lg' }"
+		:options="{ title: __('Draft Orders'), size: 'lg' }"
 	>
 		<template #body-content>
 			<div class="flex flex-col gap-3">
@@ -13,8 +13,8 @@
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
 						</svg>
 					</div>
-					<p class="text-sm font-medium text-gray-900">{{ __('No draft invoices') }}</p>
-					<p class="text-xs text-gray-500 mt-1">{{ __('Save invoices as drafts to continue later') }}</p>
+					<p class="text-sm font-medium text-gray-900">{{ __('No draft orders') }}</p>
+					<p class="text-xs text-gray-500 mt-1">{{ __('Save orders as drafts to continue later') }}</p>
 				</div>
 
 				<!-- Drafts List -->
@@ -27,9 +27,18 @@
 					>
 						<div class="flex items-start justify-between mb-2">
 							<div class="flex-1">
+							<div class="flex items-center gap-2">
 								<h4 class="text-sm font-semibold text-gray-900">
 									{{ draft.draft_id }}
 								</h4>
+								<span
+									:class="draft.target_doctype === 'Sales Order'
+										? 'text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700'
+										: 'text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-purple-100 text-purple-700'"
+								>
+									{{ draft.target_doctype === 'Sales Order' ? __('Sales Order') : __('Invoice') }}
+								</span>
+							</div>
 								<p v-if="draft.customer" class="text-xs text-gray-500 mt-0.5">
 									{{ __('Customer: {0}', [(draft.customer?.customer_name || draft.customer?.name || draft.customer)]) }}
 								</p>

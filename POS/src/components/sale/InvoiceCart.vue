@@ -613,7 +613,7 @@
 							</svg>
 						</div>
 						<span class="text-[11px] sm:text-xs font-semibold text-gray-700">{{
-							__("Draft Invoices")
+							__("Draft Documents")
 						}}</span>
 					</button>
 

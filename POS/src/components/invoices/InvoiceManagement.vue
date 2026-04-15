@@ -415,8 +415,8 @@
 									<svg class="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
 									</svg>
-									<p class="text-gray-600 font-medium">{{ __('No draft invoices') }}</p>
-									<p class="text-gray-500 text-sm mt-1">{{ __('Save invoices as drafts to continue later') }}</p>
+									<p class="text-gray-600 font-medium">{{ __('No draft orders') }}</p>
+									<p class="text-gray-500 text-sm mt-1">{{ __('Save orders as drafts to continue later') }}</p>
 								</div>
 
 								<!-- Drafts Grid -->
@@ -429,7 +429,16 @@
 									>
 										<div class="flex items-start justify-between mb-2">
 											<div class="flex-1">
+												<div class="flex items-center gap-2">
 												<h4 class="text-sm font-semibold text-gray-900">{{ draft.draft_id }}</h4>
+												<span
+													:class="draft.target_doctype === 'Sales Order'
+														? 'text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700'
+														: 'text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-purple-100 text-purple-700'"
+												>
+													{{ draft.target_doctype === 'Sales Order' ? __('Sales Order') : __('Invoice') }}
+												</span>
+											</div>
 												<p v-if="draft.customer" class="text-xs text-gray-500 mt-0.5">
 													{{ __('Customer: {0}', [(draft.customer?.customer_name || draft.customer?.name || draft.customer)]) }}
 												</p>
@@ -702,14 +711,7 @@ const tabs = computed(() => [
 		activeClass: "text-indigo-600",
 		badge: () => filteredHistoryInvoices.value.length,
 	},
-	{
-		id: "drafts",
-		label: __("Drafts"),
-		icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
-		color: "purple",
-		activeClass: "text-purple-600",
-		badge: () => props.draftInvoices.length,
-	},
+
 	{
 		id: "returns",
 		label: __("Returns"),

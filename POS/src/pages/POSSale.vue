@@ -1996,7 +1996,8 @@ async function handleSaveDraft() {
 		cartStore.customer,
 		cartStore.posProfile,
 		cartStore.appliedOffers,
-		cartStore.currentDraftId
+		cartStore.currentDraftId,
+		cartStore.targetDoctype
 	);
 	if (savedDraft) {
 		cartStore.clearCart();
@@ -2014,7 +2015,8 @@ async function handleLoadDraft(draft) {
 				cartStore.customer,
 				cartStore.posProfile,
 				cartStore.appliedOffers,
-				cartStore.currentDraftId
+				cartStore.currentDraftId,
+				cartStore.targetDoctype
 			);
 
 			if (!saved) {
@@ -2032,6 +2034,11 @@ async function handleLoadDraft(draft) {
 		cartStore.invoiceItems = draftData.items;
 		cartStore.setCustomer(draftData.customer);
 		cartStore.currentDraftId = draft.draft_id; // Set current draft ID
+
+		// Restore target doctype (Sales Order or Sales Invoice)
+		if (draftData.target_doctype) {
+			cartStore.setTargetDoctype(draftData.target_doctype);
+		}
 
 		// Rebuild incremental cache to recalculate totals
 		cartStore.rebuildIncrementalCache();
