@@ -2,7 +2,7 @@
 	<!-- Main Dialog -->
 	<Dialog
 		v-model="show"
-		:options="{ title: __('Draft Orders'), size: 'lg' }"
+		:options="{ title: __('Draft Documents'), size: 'lg' }"
 	>
 		<template #body-content>
 			<div class="flex flex-col gap-3">
@@ -33,8 +33,8 @@
 								</h4>
 								<span
 									:class="draft.target_doctype === 'Sales Order'
-										? 'text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700'
-										: 'text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-purple-100 text-purple-700'"
+										? 'text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 text-center'
+										: 'text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-purple-100 text-purple-700 text-center'"
 								>
 									{{ draft.target_doctype === 'Sales Order' ? __('Sales Order') : __('Invoice') }}
 								</span>
