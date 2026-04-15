@@ -210,11 +210,11 @@ export const useCustomerSearchStore = defineStore("customerSearch", () => {
 				0,
 			)
 
-			if (cachedCustomers && cachedCustomers.length > 0) {
+			if (!forceReload && cachedCustomers && cachedCustomers.length > 0) {
 				allCustomers.value = cachedCustomers
 				log.debug(`Loaded ${cachedCustomers.length} customers from cache`)
 			} else if (!isOffline()) {
-				// Fetch from server if cache is empty and online
+				// Fetch from server if cache is empty, or we want to forceReload and are online
 				const response = await call("pos_next.api.customers.get_customers", {
 					pos_profile: posProfile,
 					search_term: "",
@@ -230,9 +230,14 @@ export const useCustomerSearchStore = defineStore("customerSearch", () => {
 				}
 				log.debug(`Loaded ${list.length} customers from server`)
 			} else {
-				// Offline and cache is empty
-				log.warn("Offline mode: No cached customers available")
-				allCustomers.value = []
+				// Offline
+				if (cachedCustomers && cachedCustomers.length > 0) {
+					log.warn("Offline mode: Cannot force reload, using cached customers")
+					allCustomers.value = cachedCustomers
+				} else {
+					log.warn("Offline mode: No cached customers available")
+					allCustomers.value = []
+				}
 			}
 
 			// Clear caches when new data is loaded

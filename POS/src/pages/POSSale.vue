@@ -2123,19 +2123,22 @@ async function handleCustomerUpdated(updatedCustomer) {
 
 async function handleRefresh() {
 	try {
-		log.info("Manual stock refresh initiated");
+		log.info("Manual stock and customer refresh initiated");
 
 		// Refresh stock from server
 		// Note: refresh() now preserves reservations internally
 		await stockStore.refresh(null, shiftStore.profileWarehouse);
 
+		// Refresh customers from server
+		await customerSearchStore.loadAllCustomers(shiftStore.profileName, true);
+
 		// Refresh cache stats to update "Last Updated" timestamp
 		const stats = await offlineWorker.getCacheStats();
 		itemStore.cacheStats = stats;
 
-		log.success("Manual stock refresh completed");
+		log.success("Manual stock and customer refresh completed");
 	} catch (error) {
-		log.error("Manual stock refresh failed:", error);
+		log.error("Manual refresh failed:", error);
 	}
 }
 
