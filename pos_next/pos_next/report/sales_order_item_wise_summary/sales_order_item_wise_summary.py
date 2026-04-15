@@ -2,19 +2,20 @@ import frappe
 
 
 def execute(filters=None):
-    columns = get_columns()
+    filters = filters or {}
+    columns = get_columns(filters)
     data = get_data(filters)
     return columns, data
 
 
-def get_columns():
+def get_columns(filters):
     return [
         {
             "label": "Item Code",
             "fieldname": "item_code",
             "fieldtype": "Link",
             "options": "Item",
-            "width": 180,
+            "width": 250,
         },
         {
             "label": "Item Name",
@@ -59,10 +60,10 @@ def get_columns():
 def get_data(filters):
     conditions = get_conditions(filters)
     having_clause = get_having_clause(filters)
+    
+    is_customer_wise = filters.get("customer_wise")
 
-    data = frappe.db.sql(
-        """
-        SELECT
+    select_clause = """
             soi.item_code,
             soi.item_name,
             soi.uom,
@@ -70,6 +71,23 @@ def get_data(filters):
             SUM(soi.delivered_qty) AS delivered_qty,
             SUM(soi.qty - soi.delivered_qty) AS pending_qty,
             COUNT(DISTINCT so.name) AS sales_orders
+    """
+    
+    group_by_clause = "soi.item_code, soi.item_name, soi.uom"
+    order_by_clause = "pending_qty DESC"
+
+    if is_customer_wise:
+        select_clause = """
+            so.customer,
+            so.customer_name,
+        """ + select_clause
+        group_by_clause = "so.customer, so.customer_name, " + group_by_clause
+        order_by_clause = "so.customer_name, pending_qty DESC"
+
+    data = frappe.db.sql(
+        f"""
+        SELECT
+            {select_clause}
         FROM
             `tabSales Order Item` soi
         INNER JOIN
@@ -77,16 +95,61 @@ def get_data(filters):
         WHERE
             so.docstatus = 1
             AND so.status NOT IN ('Closed', 'Cancelled')
-            {conditions}
+            {{conditions}}
         GROUP BY
-            soi.item_code, soi.item_name, soi.uom
-        {having_clause}
+            {group_by_clause}
+        {{having_clause}}
         ORDER BY
-            pending_qty DESC
+            {order_by_clause}
         """.format(conditions=conditions, having_clause=having_clause),
         filters,
         as_dict=True,
     )
+
+    if is_customer_wise:
+        # Pre-compute totals per customer
+        customer_totals = {}
+        customer_meta = {}
+        for row in data:
+            cust = row.customer
+            if cust not in customer_totals:
+                customer_totals[cust] = {"qty": 0, "delivered_qty": 0, "pending_qty": 0, "sales_orders": 0}
+                customer_meta[cust] = {"customer_name": row.customer_name}
+            customer_totals[cust]["qty"] += row.qty or 0
+            customer_totals[cust]["delivered_qty"] += row.delivered_qty or 0
+            customer_totals[cust]["pending_qty"] += row.pending_qty or 0
+            customer_totals[cust]["sales_orders"] += row.sales_orders or 0
+
+        result = []
+        current_customer = None
+
+        for row in data:
+            if row.customer != current_customer:
+                totals = customer_totals[row.customer]
+                # Add Parent Row for Accordion with totals
+                result.append({
+                    "id": row.customer,
+                    "item_code": row.customer_name or row.customer,
+                    "item_name": "",
+                    "uom": "",
+                    "qty": totals["qty"],
+                    "delivered_qty": totals["delivered_qty"],
+                    "pending_qty": totals["pending_qty"],
+                    "sales_orders": totals["sales_orders"],
+                    "indent": 0,
+                    "is_group": 1,
+                })
+                current_customer = row.customer
+
+            # Child row
+            child_row = dict(row)
+            child_row["id"] = f"{row.customer}-{row.item_code}"
+            child_row["parent_id"] = row.customer
+            child_row["indent"] = 1
+            child_row["is_group"] = 0
+
+            result.append(child_row)
+        return result
 
     return data
 

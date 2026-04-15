@@ -31,12 +31,25 @@ frappe.query_reports["Sales Order Item Wise Summary"] = {
             fieldtype: "Link",
             options: "Customer",
         },
+        {
+            fieldname: "customer_wise",
+            label: __("Customer Wise"),
+            fieldtype: "Check",
+            default: 0,
+        },
     ],
+    
+    tree: true,
+    name_field: "id",
+    parent_field: "parent_id",
+    initial_depth: 1,
 
     formatter: function (value, row, column, data, default_formatter) {
         value = default_formatter(value, row, column, data);
 
-        if (column.fieldname === "pending_qty" && data && data.pending_qty > 0) {
+        if (data && data.is_group) {
+            value = `<b>${value || ""}</b>`;
+        } else if (column.fieldname === "pending_qty" && data && data.pending_qty > 0) {
             value = `<span style="color: #e24c4c; font-weight: bold;">${value}</span>`;
         }
 
