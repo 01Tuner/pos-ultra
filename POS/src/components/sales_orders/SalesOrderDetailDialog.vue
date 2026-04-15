@@ -421,6 +421,9 @@ async function handleCreateInvoice() {
         // Clear existing cart
         cartStore.clearCart()
 
+        // Set target doctype to Invoice
+        cartStore.setTargetDoctype('Sales Invoice')
+
         // Respect update_stock flag from backend (backend sets 0 when items are already delivered)
         if (mappedDoc.update_stock !== undefined) {
             cartStore.setUpdateStockOverride(mappedDoc.update_stock)
@@ -448,7 +451,6 @@ async function handleCreateInvoice() {
                     stock_uom: item.stock_uom,
                     conversion_factor: item.conversion_factor,
                     item_group: item.item_group,
-                    description: item.description,
                     discount_percentage: item.discount_percentage,
                     discount_amount: item.discount_amount,
                     // Reference fields
@@ -462,6 +464,9 @@ async function handleCreateInvoice() {
                 }, item.qty || item.quantity || 1)
             })
         }
+
+        // Set target doctype to Invoice AFTER adding items so it's not overridden by addItem
+        cartStore.setTargetDoctype('Sales Invoice')
 
         showSuccess(__("Invoice created from Sales Order"))
         emit("invoice-created")
@@ -481,9 +486,6 @@ async function handleCreateDeliveryNote() {
         
         // Clear existing cart
         cartStore.clearCart()
-        
-        // Set target doctype to Delivery Note
-        cartStore.setTargetDoctype('Delivery Note')
 
         // Set customer
         if (mappedDoc.customer) {
@@ -507,7 +509,6 @@ async function handleCreateDeliveryNote() {
                     stock_uom: item.stock_uom,
                     conversion_factor: item.conversion_factor,
                     item_group: item.item_group,
-                    description: item.description,
                     discount_percentage: item.discount_percentage,
                     discount_amount: item.discount_amount,
                     // Reference fields
@@ -521,6 +522,9 @@ async function handleCreateDeliveryNote() {
                 }, item.qty || item.quantity || 1)
             })
         }
+
+        // Set target doctype to Delivery Note AFTER adding items so it's not overridden by addItem
+        cartStore.setTargetDoctype('Delivery Note')
 
         showSuccess(__("Delivery Note prepared in Cart"))
         emit("delivery-note-prepared")

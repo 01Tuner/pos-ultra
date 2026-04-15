@@ -40,6 +40,7 @@
         "allow_sales_order",
         "allow_select_sales_order",
         "create_only_sales_order",
+        "create_sales_order_by_default",
         "column_break_operations",
         "allow_return_without_invoice",
         "return_validity_days",
@@ -324,6 +325,14 @@
             "fieldname": "allow_select_sales_order",
             "fieldtype": "Check",
             "label": "Allow Select Sales Order"
+        },
+        {
+            "default": "0",
+            "depends_on": "allow_sales_order",
+            "description": "If enabled, Sales Order will be selected by default when an item is added to cart",
+            "fieldname": "create_sales_order_by_default",
+            "fieldtype": "Check",
+            "label": "Create Sales Order By Default"
         },
         {
             "default": "0",

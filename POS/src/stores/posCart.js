@@ -219,7 +219,13 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		}
 
 		// Add item to cart - no toast notification for performance
+		const isFirstItem = invoiceItems.value.length === 0
 		addItemToInvoice(item, qty)
+		
+		// If this is the first item and create_sales_order_by_default is enabled, switch to Sales Order
+		if (isFirstItem && settingsStore.allowSalesOrder && settingsStore.createSalesOrderByDefault) {
+			targetDoctype.value = "Sales Order"
+		}
 	}
 
 	function clearCart() {
@@ -232,7 +238,9 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		appliedOffers.value = []
 		appliedCoupon.value = null
 		// currentDraftId.value = null // Handled by clearInvoiceCart -> resetInvoice
-		targetDoctype.value = "Sales Invoice"
+		targetDoctype.value = (settingsStore.allowSalesOrder && settingsStore.createSalesOrderByDefault) 
+			? "Sales Order" 
+			: "Sales Invoice"
 		amendingOrderName.value = null
 		forceUpdateStock.value = null
 

@@ -267,9 +267,43 @@ export const useCustomerSearchStore = defineStore("customerSearch", () => {
 		}
 	}
 
+	let searchTimeout = null
+
 	function setSearchTerm(term) {
 		searchTerm.value = term
 		selectedIndex.value = -1
+
+		// If online and we have a reasonable search term, check server if we don't have many local matches
+		if (term && term.length >= 2 && !isOffline() && filteredCustomers.value.length < 5) {
+			clearTimeout(searchTimeout)
+			searchTimeout = setTimeout(async () => {
+				try {
+					const response = await call("pos_next.api.customers.get_customers", {
+						search_term: term,
+						start: 0,
+						limit: 20,
+					})
+					const list = response?.message || response || []
+					if (list.length > 0) {
+						// Merge with existing allCustomers avoiding duplicates
+						const existingIds = new Set(allCustomers.value.map(c => c.name))
+						const newCustomers = list.filter(c => !existingIds.has(c.name))
+						
+						if (newCustomers.length > 0) {
+							allCustomers.value = [...newCustomers, ...allCustomers.value]
+							// Update local cache in background
+							offlineWorker.cacheCustomers(newCustomers).catch(e => log.warn("Failed to cache searched customers", e))
+							
+							// Clear indices to force recomputation with new data
+							searchIndex.value.clear()
+							resultCache.value.clear()
+						}
+					}
+				} catch (e) {
+					log.error("Server search failed", e)
+				}
+			}, 400)
+		}
 	}
 
 	function clearSearch() {

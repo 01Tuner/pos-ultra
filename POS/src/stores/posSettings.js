@@ -37,6 +37,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		allow_sales_order: 0,
 		allow_select_sales_order: 0,
 		create_only_sales_order: 0,
+		create_sales_order_by_default: 0,
 		allow_return_without_invoice: 0,
 		allow_free_batch_return: 0,
 		allow_print_draft_invoices: 0,
@@ -152,6 +153,9 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 	)
 	const createOnlySalesOrder = computed(() =>
 		Boolean(settings.value.create_only_sales_order),
+	)
+	const createSalesOrderByDefault = computed(() =>
+		Boolean(settings.value.create_sales_order_by_default),
 	)
 	const allowReturnWithoutInvoice = computed(() =>
 		Boolean(settings.value.allow_return_without_invoice),
@@ -318,6 +322,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 			allow_sales_order: 0,
 			allow_select_sales_order: 0,
 			create_only_sales_order: 0,
+			create_sales_order_by_default: 0,
 			allow_return_without_invoice: 0,
 			allow_free_batch_return: 0,
 			allow_print_draft_invoices: 0,
@@ -433,6 +438,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		allowSalesOrder,
 		allowSelectSalesOrder,
 		createOnlySalesOrder,
+		createSalesOrderByDefault,
 		allowReturnWithoutInvoice,
 		allowFreeBatchReturn,
 		allowPrintDraftInvoices,
