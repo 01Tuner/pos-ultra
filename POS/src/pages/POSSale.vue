@@ -340,6 +340,14 @@
 			<!-- ERPNext Reports Dialog -->
 			<ReportsDialog v-model="showReportsDialog" />
 
+			<!-- Customer Management -->
+			<CustomerManagement v-model="showCustomerManagement" :pos-profile="shiftStore.profileName"
+				:currency="shiftStore.profileCurrency" @make-payment="handleCustomerMakePayment" />
+
+			<!-- Payment Management -->
+			<PaymentManagement v-model="showPaymentManagement" :pos-profile="shiftStore.profileName"
+				:currency="shiftStore.profileCurrency" :default-customer="selectedCustomerForPayment" />
+
 			<!-- Invoice Management -->
 			<InvoiceManagement v-model="showInvoiceManagement" :pos-profile="shiftStore.profileName"
 				:currency="shiftStore.profileCurrency" :history-invoices="invoiceHistoryData"
@@ -638,6 +646,8 @@ import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog.vue";
 import SalesOrderDetailDialog from "@/components/sales_orders/SalesOrderDetailDialog.vue";
 import DeliveryNoteDetailDialog from "@/components/delivery_notes/DeliveryNoteDetailDialog.vue";
 import ReportsDialog from "@/components/sale/ReportsDialog.vue";
+import CustomerManagement from "@/components/customers/CustomerManagement.vue";
+import PaymentManagement from "@/components/payments/PaymentManagement.vue";
 import { useRealtimeStock } from "@/composables/useRealtimeStock";
 import { usePOSEvents } from "@/composables/usePOSEvents";
 import { useLocale } from "@/composables/useLocale";
@@ -754,6 +764,9 @@ const showDeliveryNoteManagement = ref(false);
 // Invoice Detail dialog
 const showInvoiceDetail = ref(false);
 const showReportsDialog = ref(false);
+const showCustomerManagement = ref(false);
+const showPaymentManagement = ref(false);
+const selectedCustomerForPayment = ref(null);
 const selectedInvoiceForView = ref(null);
 const showSalesOrderDetail = ref(false);
 const selectedSalesOrderForView = ref(null);
@@ -768,6 +781,8 @@ const currentActiveManagementTab = computed(() => {
     if (showPromotionManagement.value) return 'promotions';
     if (showStockLookup.value) return 'products';
     if (showReportsDialog.value) return 'reports';
+    if (showCustomerManagement.value) return 'customers';
+    if (showPaymentManagement.value) return 'payments';
     return 'dashboard';
 });
 
@@ -2417,10 +2432,15 @@ function restoreBodyStyles() {
 
 // Management and Promotion handlers
 function handleManagementMenuClick(menuItem) {
-	if (menuItem === "promotions") {
-		showPromotionManagement.value = true;
-	} else if (menuItem === "settings") {
+	if (menuItem === "settings") {
+		showSalesOrderDetail.value = false;
+		showDeliveryNoteDetail.value = false;
+		showReportsDialog.value = false;
+		showCustomerManagement.value = false;
+		showPaymentManagement.value = false;
 		showPOSSettings.value = true;
+	} else if (menuItem === "promotions") {
+		showPromotionManagement.value = true;
 	} else if (menuItem === "sales_orders") {
 		showSalesOrderManagement.value = true;
 	} else if (menuItem === "delivery_notes") {
@@ -2436,6 +2456,10 @@ function handleManagementMenuClick(menuItem) {
 		showStockLookup.value = true;
 	} else if (menuItem === "reports") {
 		showReportsDialog.value = true;
+	} else if (menuItem === "customers") {
+		showCustomerManagement.value = true;
+	} else if (menuItem === "payments") {
+		showPaymentManagement.value = true;
 	} else if (menuItem === 'dashboard') {
         // Close all management dialogs
         showSalesOrderManagement.value = false;
@@ -2445,7 +2469,15 @@ function handleManagementMenuClick(menuItem) {
         showPromotionManagement.value = false;
         showStockLookup.value = false;
         showReportsDialog.value = false;
+		showCustomerManagement.value = false;
+		showPaymentManagement.value = false;
     }
+}
+
+function handleCustomerMakePayment(customer) {
+	selectedCustomerForPayment.value = customer;
+	showCustomerManagement.value = false;
+	showPaymentManagement.value = true;
 }
 
 // Load invoice history data
