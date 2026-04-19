@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model="open" :options="{ title: selectedReport ? selectedReport.label : __('Reports'), size: selectedReport ? '5xl' : 'sm' }">
+  <Dialog v-model="open" :options="{ title: selectedReport ? selectedReport.label : __('Reports'), size: selectedReport ? 'full' : 'lg' }">
     <template #body-content>
       <div v-if="!selectedReport" class="p-4">
         <p class="text-sm text-gray-500 mb-4">{{ __('Select a report to view') }}</p>
