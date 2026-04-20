@@ -31,7 +31,7 @@ def get_customer_outstanding_invoices(customer):
     return invoices
 
 @frappe.whitelist()
-def create_customer_payment(customer, mode_of_payment, amount, pos_profile=None, allocations=None):
+def create_customer_payment(customer, mode_of_payment, amount, pos_profile=None, allocations=None, pos_opening_shift=None):
     """
     Creates a Payment Entry to settle customer outstanding balances.
     allocations: JSON string of list
@@ -85,7 +85,7 @@ def create_customer_payment(customer, mode_of_payment, amount, pos_profile=None,
     pe.paid_amount = amount
     pe.received_amount = amount
     pe.posting_date = nowdate()
-    pe.reference_no = f"POS-{pos_profile}" if pos_profile else f"Payment-{customer}"
+    pe.reference_no = pos_opening_shift or (f"POS-{pos_profile}" if pos_profile else f"Payment-{customer}")
     pe.reference_date = nowdate()
     
     # Optional field that many users add to track which POS profile created it

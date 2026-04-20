@@ -91,7 +91,7 @@
 						<button @click="handleTabSwitch('items')" :class="[
 							'flex-1 px-3 py-3 text-sm font-semibold transition-[color,background-color,border-color] duration-100 relative touch-manipulation',
 							uiStore.mobileActiveTab === 'items'
-								? 'text-blue-600 border-b-3 border-blue-600 bg-blue-50'
+								? 'text-blue-600 border-b-3 border-blue-600 bg-blue-100'
 								: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 active:bg-gray-100',
 						]" :aria-label="__('View items')" :aria-selected="uiStore.mobileActiveTab === 'items'" role="tab">
 							<div class="flex items-center justify-center gap-1.5">
@@ -105,7 +105,7 @@
 						<button @click="handleTabSwitch('cart')" :class="[
 							'flex-1 px-3 py-3 text-sm font-semibold transition-[color,background-color,border-color] duration-100 relative touch-manipulation',
 							uiStore.mobileActiveTab === 'cart'
-								? 'text-blue-600 border-b-3 border-blue-600 bg-blue-50'
+								? 'text-blue-600 border-b-3 border-blue-600 bg-blue-100'
 								: 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 active:bg-gray-100',
 						]" :aria-label="__('View cart')" :aria-selected="uiStore.mobileActiveTab === 'cart'" role="tab">
 							<div class="flex items-center justify-center gap-1.5">
@@ -346,7 +346,8 @@
 
 			<!-- Payment Management -->
 			<PaymentManagement v-model="showPaymentManagement" :pos-profile="shiftStore.profileName"
-				:currency="shiftStore.profileCurrency" :default-customer="selectedCustomerForPayment" />
+				:currency="shiftStore.profileCurrency" :default-customer="selectedCustomerForPayment"
+				:pos-opening-shift="shiftStore.currentShift?.name" />
 
 			<!-- Invoice Management -->
 			<InvoiceManagement v-model="showInvoiceManagement" :pos-profile="shiftStore.profileName"
@@ -2443,14 +2444,17 @@ function handleManagementMenuClick(menuItem) {
 		showPromotionManagement.value = true;
 	} else if (menuItem === "sales_orders") {
 		showSalesOrderManagement.value = true;
+		if (!uiStore.isDesktop) handleTabSwitch('cart');
 	} else if (menuItem === "delivery_notes") {
 		showDeliveryNoteManagement.value = true;
+		if (!uiStore.isDesktop) handleTabSwitch('cart');
 	} else if (menuItem === "invoices") {
 		// Load invoice history data before showing
 		loadInvoiceHistoryData();
 		// Load drafts data
 		draftsStore.loadDrafts();
 		showInvoiceManagement.value = true;
+		if (!uiStore.isDesktop) handleTabSwitch('cart');
 	} else if (menuItem === "products") {
 		// Open Stock Lookup dialog in search mode
 		showStockLookup.value = true;
@@ -2459,7 +2463,9 @@ function handleManagementMenuClick(menuItem) {
 	} else if (menuItem === "customers") {
 		showCustomerManagement.value = true;
 	} else if (menuItem === "payments") {
+		selectedCustomerForPayment.value = null;
 		showPaymentManagement.value = true;
+		if (!uiStore.isDesktop) handleTabSwitch('cart');
 	} else if (menuItem === 'dashboard') {
         // Close all management dialogs
         showSalesOrderManagement.value = false;

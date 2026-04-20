@@ -122,7 +122,9 @@ export const usePOSCartStore = defineStore("posCart", () => {
 	const selectionMode = ref("uom") // 'uom' or 'variant'
 	const suppressOfferReapply = ref(false)
 	// const currentDraftId = ref(null) // Replaced by currentInvoiceName from useInvoice
-	const targetDoctype = ref("Sales Invoice")
+	const targetDoctype = ref(settingsStore.createSalesOrderByDefault ? "Sales Order" : "Sales Invoice")
+	// Track if targetDoctype was manually set by the user (to avoid overriding manual choice during settings load)
+	const isTargetDoctypeManuallySet = ref(false)
 	// Stores the original SO name while the user is amending it
 	const amendingOrderName = ref(null)
 	// Force update_stock override: null = auto-detect, 0 = force off, 1 = force on
@@ -140,6 +142,20 @@ export const usePOSCartStore = defineStore("posCart", () => {
 
 	// Generation counter to track cart changes and invalidate stale operations
 	let cartGeneration = 0
+
+	// Watch for default doctype changes and handle initial load/settings changes
+	watch(
+		() => [settingsStore.createSalesOrderByDefault, settingsStore.isLoaded],
+		([val, isLoaded]) => {
+			if (!isLoaded) return
+
+			// Set default if it hasn't been manually overridden and cart is empty
+			if (invoiceItems.value.length === 0 && !isTargetDoctypeManuallySet.value) {
+				targetDoctype.value = val ? "Sales Order" : "Sales Invoice"
+			}
+		},
+		{ immediate: true }
+	)
 
 	// Async queue for sequential offer processing
 	const offerQueue = createAsyncQueue()
@@ -223,7 +239,8 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		addItemToInvoice(item, qty)
 		
 		// If this is the first item and create_sales_order_by_default is enabled, switch to Sales Order
-		if (isFirstItem && settingsStore.allowSalesOrder && settingsStore.createSalesOrderByDefault) {
+		// Only if the user hasn't manually selected a different type already
+		if (isFirstItem && settingsStore.allowSalesOrder && settingsStore.createSalesOrderByDefault && !isTargetDoctypeManuallySet.value) {
 			targetDoctype.value = "Sales Order"
 		}
 	}
@@ -238,6 +255,7 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		appliedOffers.value = []
 		appliedCoupon.value = null
 		// currentDraftId.value = null // Handled by clearInvoiceCart -> resetInvoice
+		isTargetDoctypeManuallySet.value = false
 		targetDoctype.value = (settingsStore.allowSalesOrder && settingsStore.createSalesOrderByDefault) 
 			? "Sales Order" 
 			: "Sales Invoice"
@@ -261,6 +279,7 @@ export const usePOSCartStore = defineStore("posCart", () => {
 
 	function setTargetDoctype(doctype) {
 		targetDoctype.value = doctype
+		isTargetDoctypeManuallySet.value = true
 	}
 
 	function setAmendingOrder(name) {

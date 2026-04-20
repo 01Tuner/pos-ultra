@@ -304,7 +304,8 @@ const props = defineProps({
 	modelValue: Boolean,
 	posProfile: String,
     currency: String,
-	defaultCustomer: Object
+	defaultCustomer: Object,
+	posOpeningShift: String
 });
 
 const emit = defineEmits(["update:modelValue"]);
@@ -355,12 +356,22 @@ watch(
 			if (!modeOfPayment.value && paymentModes.value.length > 0) {
 				modeOfPayment.value = paymentModes.value[0].name;
 			}
-			if (activeTab.value === 'history') {
+			if (props.defaultCustomer) {
+				activeTab.value = 'new';
+				selectCustomer(props.defaultCustomer);
+			} else if (activeTab.value === 'history') {
 				loadPaymentHistory();
 			}
-			if (props.defaultCustomer && activeTab.value === 'new') {
-				selectCustomer(props.defaultCustomer);
-			}
+		}
+	}
+);
+
+watch(
+	() => props.defaultCustomer,
+	(newVal) => {
+		if (newVal) {
+			activeTab.value = 'new';
+			selectCustomer(newVal);
 		}
 	}
 );
@@ -492,7 +503,8 @@ async function submitPayment() {
 			mode_of_payment: modeOfPayment.value,
 			amount: paymentAmount.value,
 			pos_profile: props.posProfile,
-			allocations: JSON.stringify(allocations)
+			allocations: JSON.stringify(allocations),
+			pos_opening_shift: props.posOpeningShift
 		});
 		
 		showSuccess(__("Payment Successful!"));
