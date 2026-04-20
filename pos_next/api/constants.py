@@ -38,7 +38,10 @@ POS_SETTINGS_FIELDS = [
 	"use_delivery_charges",
 	"auto_set_delivery_charges",
 	"enable_delivery_note",
-	"allow_user_to_edit_rate"
+	"allow_user_to_edit_rate",
+	"create_sales_order_by_default",
+	"show_edit_item_if_no_price",
+	"allow_promotion"
 ]
 
 # Default POS Settings values
@@ -69,5 +72,8 @@ DEFAULT_POS_SETTINGS = {
 	"use_delivery_charges": 0,
 	"auto_set_delivery_charges": 0,
 	"enable_delivery_note": 0,
-	"allow_user_to_edit_rate": 0
+	"allow_user_to_edit_rate": 0,
+	"create_sales_order_by_default": 0,
+	"show_edit_item_if_no_price": 0,
+	"allow_promotion": 0
 }
