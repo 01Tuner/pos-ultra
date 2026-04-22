@@ -32,10 +32,18 @@ def get_customers(search_term="", pos_profile=None, limit=20):
         if pos_profile:
             frappe.logger().debug(f"Loading POS Profile: {pos_profile}")
             profile_doc = frappe.get_cached_doc("POS Profile", pos_profile)
-            # Check if customer_group field exists (it may not exist in all versions)
-            if hasattr(profile_doc, "customer_group") and profile_doc.customer_group:
-                filters["customer_group"] = profile_doc.customer_group
-                frappe.logger().debug(f"Filtering by customer_group: {profile_doc.customer_group}")
+            customer_groups_list = profile_doc.get("customer_groups", [])
+            if customer_groups_list:
+                all_allowed_groups = []
+                for row in customer_groups_list:
+                    if row.customer_group:
+                        cg = frappe.get_cached_doc("Customer Group", row.customer_group)
+                        descendants = frappe.get_all("Customer Group", filters={"lft": [">=", cg.lft], "rgt": ["<=", cg.rgt]}, pluck="name")
+                        all_allowed_groups.extend(descendants)
+                
+                if all_allowed_groups:
+                    filters["customer_group"] = ["in", list(set(all_allowed_groups))]
+                    frappe.logger().debug(f"Filtering by customer_groups and descendants")
 
         # Return all customers (for client-side filtering)
         filters["disabled"] = 0

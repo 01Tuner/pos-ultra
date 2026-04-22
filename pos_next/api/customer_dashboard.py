@@ -11,8 +11,17 @@ def get_customers_with_balances(search_term="", pos_profile=None, limit=50):
     filters = {}
     if pos_profile:
         profile_doc = frappe.get_cached_doc("POS Profile", pos_profile)
-        if hasattr(profile_doc, "customer_group") and profile_doc.customer_group:
-            filters["customer_group"] = profile_doc.customer_group
+        customer_groups_list = profile_doc.get("customer_groups", [])
+        if customer_groups_list:
+            all_allowed_groups = []
+            for row in customer_groups_list:
+                if row.customer_group:
+                    cg = frappe.get_cached_doc("Customer Group", row.customer_group)
+                    descendants = frappe.get_all("Customer Group", filters={"lft": [">=", cg.lft], "rgt": ["<=", cg.rgt]}, pluck="name")
+                    all_allowed_groups.extend(descendants)
+            
+            if all_allowed_groups:
+                filters["customer_group"] = list(set(all_allowed_groups))
 
     query = """
         SELECT 
@@ -43,9 +52,10 @@ def get_customers_with_balances(search_term="", pos_profile=None, limit=50):
         like_term = f"%{search_term}%"
         values.extend([like_term, like_term, like_term, like_term])
 
-    if "customer_group" in filters:
-        query += " AND c.customer_group = %s "
-        values.append(filters["customer_group"])
+    if "customer_group" in filters and filters["customer_group"]:
+        format_strings = ','.join(['%s'] * len(filters["customer_group"]))
+        query += f" AND c.customer_group IN ({format_strings}) "
+        values.extend(filters["customer_group"])
 
     query += """
         GROUP BY c.name

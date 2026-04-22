@@ -4,6 +4,7 @@ import { offlineWorker } from "@/utils/offline/workerClient"
 import { logger } from "@/utils/logger"
 import { defineStore } from "pinia"
 import { computed, ref } from "vue"
+import { usePOSSettingsStore } from "./posSettings"
 
 const log = logger.create("CustomerSearch")
 
@@ -283,8 +284,10 @@ export const useCustomerSearchStore = defineStore("customerSearch", () => {
 			clearTimeout(searchTimeout)
 			searchTimeout = setTimeout(async () => {
 				try {
+					const posSettings = usePOSSettingsStore()
 					const response = await call("pos_next.api.customers.get_customers", {
 						search_term: term,
+						pos_profile: posSettings.settings.pos_profile,
 						start: 0,
 						limit: 20,
 					})
@@ -293,12 +296,12 @@ export const useCustomerSearchStore = defineStore("customerSearch", () => {
 						// Merge with existing allCustomers avoiding duplicates
 						const existingIds = new Set(allCustomers.value.map(c => c.name))
 						const newCustomers = list.filter(c => !existingIds.has(c.name))
-						
+
 						if (newCustomers.length > 0) {
 							allCustomers.value = [...newCustomers, ...allCustomers.value]
 							// Update local cache in background
 							offlineWorker.cacheCustomers(newCustomers).catch(e => log.warn("Failed to cache searched customers", e))
-							
+
 							// Clear indices to force recomputation with new data
 							searchIndex.value.clear()
 							resultCache.value.clear()

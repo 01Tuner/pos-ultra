@@ -171,6 +171,7 @@ import DeliveryNoteFilters from "./DeliveryNoteFilters.vue";
 import { useDeliveryNoteFilters } from "@/composables/useDeliveryNoteFilters";
 import { usePOSCartStore } from "@/stores/posCart";
 import { usePOSSettingsStore } from "@/stores/posSettings";
+import { printDeliveryNoteByName } from "@/utils/printInvoice";
 
 const props = defineProps({
 	modelValue: Boolean,
@@ -263,10 +264,11 @@ function handleViewDN(dn) {
 
 async function handlePrintDN(dn) {
     try {
-         const printUrl = `/printview?doctype=Delivery%20Note&name=${dn.name}&format=Standard`;
-         window.open(printUrl, '_blank');
+         await printDeliveryNoteByName(dn.name);
     } catch (error) {
          console.error("Print failed", error);
+         const printUrl = `/printview?doctype=Delivery%20Note&name=${dn.name}&format=Standard`;
+         window.open(printUrl, '_blank');
     }
 }
 
