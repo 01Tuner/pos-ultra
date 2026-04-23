@@ -41,7 +41,8 @@ POS_SETTINGS_FIELDS = [
 	"allow_user_to_edit_rate",
 	"create_sales_order_by_default",
 	"show_edit_item_if_no_price",
-	"allow_promotion"
+	"allow_promotion",
+	"print_format"
 ]
 
 # Default POS Settings values

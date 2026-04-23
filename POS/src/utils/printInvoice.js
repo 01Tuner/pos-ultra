@@ -1,3 +1,4 @@
+import { usePOSSettingsStore } from "@/stores/posSettings"
 import { call } from "@/utils/apiWrapper"
 import { logger } from "@/utils/logger"
 
@@ -21,18 +22,20 @@ export async function printInvoice(
 		}
 
 		const doctype = invoiceData.doctype || "Sales Invoice"
-		const format = printFormat || "POS Next Receipt"
 
 		// Build PDF print URL
 		const params = new URLSearchParams({
 			doctype: doctype,
 			name: invoiceData.name,
-			format: format,
 			no_letterhead: letterhead ? 0 : 1,
 			_lang: "en",
 			trigger_print: 1,
 			_t: Date.now(), // Cache buster to force fresh print format
 		})
+
+		if (printFormat) {
+			params.append("format", printFormat)
+		}
 
 		if (letterhead) {
 			params.append("letterhead", letterhead)
@@ -507,6 +510,18 @@ export async function printInvoiceByName(
 			} catch (error) {
 				log.warn("Could not fetch POS Profile print settings:", error)
 				// Continue with default print format
+			}
+		}
+
+		// Fallback to POS Settings if POS Profile doesn't have a print format
+		if (!printFormat) {
+			try {
+				const posSettings = usePOSSettingsStore()
+				if (posSettings.customPrintFormat) {
+					printFormat = posSettings.customPrintFormat
+				}
+			} catch (error) {
+				log.warn("Could not fetch POS Settings print format:", error)
 			}
 		}
 

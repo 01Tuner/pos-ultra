@@ -2554,7 +2554,7 @@ function handleViewInvoice(invoice) {
 async function handlePrintInvoice(invoiceData) {
 	try {
 		// If invoiceData is a full document with items, use printInvoice directly
-		if (invoiceData.items && Array.isArray(invoiceData.items)) {
+		if (offlineStore.isOffline && invoiceData.items && Array.isArray(invoiceData.items)) {
 			await printInvoice(invoiceData);
 		} else {
 			// If it's just an invoice object with name, fetch and print

@@ -48,6 +48,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		allow_duplicate_customer_names: 0,
 		fetch_coupon: 0,
 		// Printing
+		print_format: "",
 		allow_print_last_invoice: 0,
 		silent_print: 0,
 		// Delivery
@@ -182,6 +183,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 	const fetchCoupon = computed(() => Boolean(settings.value.fetch_coupon))
 
 	// Computed - Printing
+	const customPrintFormat = computed(() => settings.value.print_format || "")
 	const allowPrintLastInvoice = computed(() =>
 		Boolean(settings.value.allow_print_last_invoice),
 	)
@@ -330,6 +332,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 			allow_customer_purchase_order: 0,
 			allow_duplicate_customer_names: 0,
 			fetch_coupon: 0,
+			print_format: "",
 			allow_print_last_invoice: 0,
 			silent_print: 0,
 			use_delivery_charges: 0,
@@ -452,6 +455,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		fetchCoupon,
 
 		// Computed - Printing
+		customPrintFormat,
 		allowPrintLastInvoice,
 		silentPrint,
 

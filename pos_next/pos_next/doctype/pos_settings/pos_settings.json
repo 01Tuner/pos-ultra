@@ -55,6 +55,7 @@
         "allow_duplicate_customer_names",
         "fetch_coupon",
         "section_break_printing",
+        "print_format",
         "allow_print_last_invoice",
         "silent_print",
         "section_break_delivery",
@@ -433,6 +434,13 @@
             "fieldname": "section_break_printing",
             "fieldtype": "Section Break",
             "label": "Printing"
+        },
+        {
+            "description": "Select a custom Print Format for Sales Invoices. This overrides the POS Profile print format.",
+            "fieldname": "print_format",
+            "fieldtype": "Link",
+            "label": "Print Format",
+            "options": "Print Format"
         },
         {
             "default": "0",
