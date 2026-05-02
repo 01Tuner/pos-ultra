@@ -208,9 +208,9 @@
 						</div>
 
 						<!-- Payment History Tab -->
-						<div v-show="activeTab === 'history'" class="absolute inset-0 flex flex-col p-6 overflow-y-auto">
+						<div v-show="activeTab === 'history'" class="absolute inset-0 flex flex-col p-6 overflow-y-auto pb-8">
 							<div class="flex items-center justify-between mb-4">
-								<h3 class="text-lg font-bold text-gray-900">{{ __('Recent Payments (This POS Profile)') }}</h3>
+								<h3 class="text-lg font-bold text-gray-900">{{ __('Recent Payments (This Shift)') }}</h3>
 								<Button @click="loadPaymentHistory" :loading="loadingHistory" variant="ghost" size="sm">
 									<template #prefix>
 										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,7 +229,7 @@
 								{{ __('No payments recorded from this terminal yet.') }}
 							</div>
 							
-							<div v-else class="bg-transparent sm:bg-white sm:rounded-xl sm:shadow sm:border border-gray-200 overflow-hidden">
+							<div v-else class="bg-transparent sm:bg-white sm:rounded-xl sm:shadow sm:border border-gray-200">
 								<!-- Mobile View -->
 								<div class="block sm:hidden space-y-4 px-1 pb-8">
 									<div v-for="pay in history" :key="'mobpay-'+pay.name" class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col gap-3">
