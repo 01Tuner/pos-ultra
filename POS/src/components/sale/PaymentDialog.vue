@@ -634,6 +634,23 @@
 							<p :class="isSmallMobile ? 'text-[10px]' : 'text-xs'" class="text-blue-600">{{ __('Select a payment method') }}</p>
 						</div>
 
+                        <!-- Mobile Write Off Amount -->
+                        <div class="mb-2">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Write Off Amount') }}</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 text-xs">{{ getCurrencySymbol() }}</span>
+                                </div>
+                                <input type="number" v-model.number="writeOffAmount" min="0" step="0.01" class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-6 pr-8 py-1.5 text-sm text-right font-bold border-gray-300 rounded-lg bg-yellow-50 border" :placeholder="__('0.00')" />
+                                <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 text-[10px]">{{ currency }}</span>
+                                </div>
+                            </div>
+                            <div class="mt-1 flex justify-start">
+                                <button @click="fillWriteOffOutstanding" class="text-[10px] font-semibold text-yellow-600 hover:text-yellow-800">{{ __('Write Off Remaining') }}</button>
+                            </div>
+                        </div>
+
 						<!-- Mobile Action Buttons - Always visible at bottom -->
 						<div :class="['flex-shrink-0', isSmallMobile ? 'space-y-1' : 'space-y-1.5']">
 							<!-- Two buttons side by side when both needed -->
@@ -815,6 +832,23 @@
 							</button>
 							</div>
 						</div>
+                        
+                        <!-- Write Off Amount -->
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Write Off Amount') }}</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">{{ getCurrencySymbol() }}</span>
+                                </div>
+                                <input type="number" v-model.number="writeOffAmount" min="0" step="0.01" class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-8 pr-12 py-2 sm:text-lg text-right font-bold border-gray-300 rounded-lg bg-yellow-50 border" :placeholder="__('0.00')" />
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">{{ currency }}</span>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex justify-start">
+                                <button @click="fillWriteOffOutstanding" class="text-xs font-semibold text-yellow-600 hover:text-yellow-800">{{ __('Write Off Remaining') }}</button>
+                            </div>
+                        </div>
 
 					<!-- Action Buttons - Below Keypad (Desktop only) -->
 					<div :class="['hidden lg:flex items-center gap-2', isCompactMode ? 'mt-2' : 'mt-4']">
@@ -961,6 +995,7 @@ const paymentMethods = ref([])
 const loadingPaymentMethods = ref(false)
 const lastSelectedMethod = ref(null)
 const customAmount = ref("")
+const writeOffAmount = ref(0)
 const paymentEntries = ref([])
 const customerCredit = ref([])
 const customerBalance = ref({ total_outstanding: 0, total_credit: 0, net_balance: 0 })
@@ -1423,7 +1458,7 @@ const calculatedAdditionalDiscount = computed(() => {
 })
 
 const remainingAmount = computed(() => {
-	const remaining = round2(props.grandTotal) - totalPaid.value
+	const remaining = round2(props.grandTotal) - totalPaid.value - (Number(writeOffAmount.value) || 0)
 	return remaining > 0 ? round2(remaining) : 0
 })
 
@@ -1505,10 +1540,10 @@ const canComplete = computed(() => {
 
 	// If partial payment is allowed, can complete with any amount > 0
 	if (props.allowPartialPayment) {
-		return totalPaid.value > 0 && paymentEntries.value.length > 0
+		return (totalPaid.value > 0 || writeOffAmount.value > 0) && (paymentEntries.value.length > 0 || writeOffAmount.value > 0)
 	}
 	// Otherwise require full payment
-	return remainingAmount.value === 0 && paymentEntries.value.length > 0
+	return remainingAmount.value === 0 && (paymentEntries.value.length > 0 || writeOffAmount.value > 0)
 })
 
 const paymentButtonText = computed(() => {
@@ -1881,6 +1916,13 @@ function clearAll() {
 	customAmount.value = ""
 }
 
+function fillWriteOffOutstanding() {
+	const unpaid = round2(props.grandTotal) - totalPaid.value;
+	if (unpaid > 0) {
+		writeOffAmount.value = round2(unpaid);
+	}
+}
+
 function completePayment() {
 	log.debug('[PaymentDialog] Complete payment called:', {
 		canComplete: canComplete.value,
@@ -1906,6 +1948,7 @@ function completePayment() {
 		outstanding_amount: isPartial ? remainingAmount.value : 0,
 		sales_team: selectedSalesPersons.value.length > 0 ? selectedSalesPersons.value : null,
 		delivery_date: isSalesOrder.value ? deliveryDate.value : null,
+		write_off_amount: writeOffAmount.value || 0,
 	}
 
 	log.debug('[PaymentDialog] Emitting payment-completed:', paymentData)

@@ -815,6 +815,7 @@ export function useInvoice() {
 					customer: customer.value?.name || customer.value,
 					items: formatItemsForSubmission(rawItems),
 					discount_amount: additionalDiscount.value || 0,
+					write_off_amount: writeOffAmount.value || 0,
 					coupon_code: couponCode.value,
 				}
 

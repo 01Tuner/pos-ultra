@@ -42,7 +42,8 @@ POS_SETTINGS_FIELDS = [
 	"create_sales_order_by_default",
 	"show_edit_item_if_no_price",
 	"allow_promotion",
-	"print_format"
+	"print_format",
+	"enable_stock_transfer"
 ]
 
 # Default POS Settings values
@@ -76,5 +77,6 @@ DEFAULT_POS_SETTINGS = {
 	"allow_user_to_edit_rate": 0,
 	"create_sales_order_by_default": 0,
 	"show_edit_item_if_no_price": 0,
-	"allow_promotion": 0
+	"allow_promotion": 0,
+	"enable_stock_transfer": 0
 }

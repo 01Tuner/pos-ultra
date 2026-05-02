@@ -31,15 +31,17 @@ def get_customer_outstanding_invoices(customer):
     return invoices
 
 @frappe.whitelist()
-def create_customer_payment(customer, mode_of_payment, amount, pos_profile=None, allocations=None, pos_opening_shift=None):
+def create_customer_payment(customer, mode_of_payment, amount, pos_profile=None, allocations=None, pos_opening_shift=None, write_off_amount=0):
     """
     Creates a Payment Entry to settle customer outstanding balances.
     allocations: JSON string of list
                  [{"name": "SINV-001", "allocated_amount": 100}]
     """
     amount = flt(amount)
-    if amount <= 0:
-        frappe.throw(_("Payment amount must be greater than zero"))
+    write_off_amount = flt(write_off_amount)
+    
+    if amount <= 0 and write_off_amount <= 0:
+        frappe.throw(_("Payment amount or write off amount must be greater than zero"))
 
     if not allocations:
         allocations = "[]"
@@ -87,6 +89,30 @@ def create_customer_payment(customer, mode_of_payment, amount, pos_profile=None,
     pe.posting_date = nowdate()
     pe.reference_no = pos_opening_shift or (f"POS-{pos_profile}" if pos_profile else f"Payment-{customer}")
     pe.reference_date = nowdate()
+    
+    # Handle Write Off
+    if write_off_amount > 0:
+        write_off_account = None
+        write_off_cost_center = None
+        if pos_profile:
+            profile_doc = frappe.get_cached_doc("POS Profile", pos_profile)
+            write_off_account = profile_doc.write_off_account
+            write_off_cost_center = profile_doc.write_off_cost_center
+            
+        if not write_off_account:
+            write_off_account = frappe.get_cached_value("Company", company, "write_off_account")
+        if not write_off_cost_center:
+            write_off_cost_center = frappe.get_cached_value("Company", company, "cost_center")
+            
+        if not write_off_account:
+            frappe.throw(_("Please set Write Off Account in POS Profile or Company"))
+            
+        pe.append("deductions", {
+            "account": write_off_account,
+            "cost_center": write_off_cost_center,
+            "amount": write_off_amount,
+            "description": "Write Off for POS Payment"
+        })
     
     # Optional field that many users add to track which POS profile created it
     # We will safely ignore it if the custom field doesn't exist

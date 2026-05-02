@@ -323,6 +323,7 @@ async function handlePaymentCompleted(paymentData) {
 		const result = await call("pos_next.api.partial_payments.add_payment_to_partial_invoice", {
 			invoice_name: selectedInvoice.value.name,
 			payments: paymentData.payments,
+			write_off_amount: paymentData.write_off_amount
 		})
 
 		console.log('[PartialPayments] API response:', result)

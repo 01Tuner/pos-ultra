@@ -315,7 +315,10 @@
 				:initial-name="uiStore.initialCustomerName" :customer="editCustomer"
 				@customer-created="handleCustomerCreated" @customer-updated="handleCustomerUpdated" />
 
-			<!-- Promotion Management -->
+			
+			<!-- Stock Transfer -->
+			<StockTransfer v-model="showStockTransfer" />
+<!-- Promotion Management -->
 			<PromotionManagement v-model="showPromotionManagement" :pos-profile="shiftStore.profileName"
 				:company="shiftStore.profileCompany" :currency="shiftStore.profileCurrency"
 				@promotion-saved="handlePromotionSaved" />
@@ -766,6 +769,7 @@ const showDeliveryNoteManagement = ref(false);
 const showInvoiceDetail = ref(false);
 const showReportsDialog = ref(false);
 const showCustomerManagement = ref(false);
+const showStockTransfer = ref(false);
 const showPaymentManagement = ref(false);
 const selectedCustomerForPayment = ref(null);
 const selectedInvoiceForView = ref(null);
@@ -822,6 +826,7 @@ async function handleInvoicePaymentCompleted(paymentData) {
 		await call("pos_next.api.partial_payments.add_payment_to_partial_invoice", {
 			invoice_name: selectedInvoiceForPayment.value.name,
 			payments: paymentData.payments,
+			write_off_amount: paymentData.write_off_amount,
 			delivery_date: paymentData.delivery_date
 		});
 
@@ -1765,6 +1770,13 @@ async function handlePaymentCompleted(paymentData) {
 		if (paymentData.delivery_date) {
 			cartStore.setDeliveryDate(paymentData.delivery_date);
 		}
+		
+		// Set write_off_amount
+		if (paymentData.write_off_amount) {
+			cartStore.writeOffAmount = paymentData.write_off_amount;
+		} else {
+			cartStore.writeOffAmount = 0;
+		}
 
 		// Delete draft if it exists (since we're submitting/saving invoice)
 		const draftIdToDelete = cartStore.currentDraftId;
@@ -2455,6 +2467,9 @@ function handleManagementMenuClick(menuItem) {
 		draftsStore.loadDrafts();
 		showInvoiceManagement.value = true;
 		if (!uiStore.isDesktop) handleTabSwitch('cart');
+	} else if (menuItem === "stock_transfer") {
+		showStockTransfer.value = true;
+		if (!uiStore.isDesktop) handleTabSwitch('cart');
 	} else if (menuItem === "products") {
 		// Open Stock Lookup dialog in search mode
 		showStockLookup.value = true;
@@ -2473,6 +2488,7 @@ function handleManagementMenuClick(menuItem) {
         showInvoiceManagement.value = false;
         showPOSSettings.value = false;
         showPromotionManagement.value = false;
+		showStockTransfer.value = false;
         showStockLookup.value = false;
         showReportsDialog.value = false;
 		showCustomerManagement.value = false;

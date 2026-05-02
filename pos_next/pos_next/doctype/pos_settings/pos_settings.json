@@ -38,6 +38,7 @@
         "display_discount_amount",
         "section_break_operations",
         "allow_sales_order",
+        "enable_stock_transfer",
         "allow_select_sales_order",
         "create_only_sales_order",
         "create_sales_order_by_default",
@@ -319,6 +320,13 @@
             "fieldname": "allow_sales_order",
             "fieldtype": "Check",
             "label": "Allow Create Sales Order"
+        },
+        {
+            "default": "0",
+            "description": "Enable stock transfer between warehouses",
+            "fieldname": "enable_stock_transfer",
+            "fieldtype": "Check",
+            "label": "Enable Stock Transfer"
         },
         {
             "default": "0",

@@ -56,6 +56,12 @@
 					<div class="tooltip">{{ __('Sales Orders') }}</div>
 				</button>
 
+				<!-- Stock Transfer -->
+				<button v-if="settingsStore.enableStockTransfer" @click="handleMenuClick('stock_transfer')" :class="getMenuClass('stock_transfer')" :title="__('Stock Transfer')">
+					<FeatherIcon name="refresh-cw" class="w-5 h-5" />
+					<div class="tooltip">{{ __('Stock Transfer') }}</div>
+				</button>
+
 				<!-- Delivery Notes -->
 				<button v-if="settingsStore.enableDeliveryNote" @click="handleMenuClick('delivery_notes')" :class="getMenuClass('delivery_notes')" :title="__('Delivery Notes')">
 					<FeatherIcon name="truck" class="w-5 h-5" />
@@ -114,7 +120,13 @@
 									<span class="font-medium text-gray-700">{{ __('Sales Orders') }}</span>
 								</button>
 
-								<!-- Delivery Notes -->
+								<!-- Stock Transfer -->
+				<button v-if="settingsStore.enableStockTransfer" @click="handleMenuClick('stock_transfer')" :class="getMenuClass('stock_transfer')" :title="__('Stock Transfer')">
+					<FeatherIcon name="refresh-cw" class="w-5 h-5" />
+					<div class="tooltip">{{ __('Stock Transfer') }}</div>
+				</button>
+
+				<!-- Delivery Notes -->
 								<button v-if="settingsStore.enableDeliveryNote" @click="handleMenuClick('delivery_notes')" class="plus-menu-item">
 									<div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
 										<FeatherIcon name="truck" class="w-5 h-5" />
@@ -214,6 +226,7 @@ function getMenuClass(menuName, defaultColor = 'blue') {
 		reports: isActive ? 'bg-orange-100 text-orange-600' : 'text-gray-600 hover:bg-gray-100',
 		invoices: isActive ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-gray-100',
 		sales_orders: isActive ? 'bg-teal-100 text-teal-600' : 'text-gray-600 hover:bg-gray-100',
+		stock_transfer: isActive ? 'bg-orange-100 text-orange-600' : 'text-gray-600 hover:bg-gray-100',
 		delivery_notes: isActive ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100',
 		settings: isActive ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-100'
 	}

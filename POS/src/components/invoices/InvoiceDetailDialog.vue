@@ -47,7 +47,6 @@
 								</div>
 							</div>
 						</div>
-					</div>
 						<div class="flex flex-col sm:items-end gap-3">
 							<div class="text-start sm:text-end">
 								<div class="text-xs text-gray-500 mb-1">{{ __('Grand Total') }}</div>
@@ -56,7 +55,7 @@
 								</div>
 							</div>
                             <!-- Action Buttons -->
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <Dropdown
                                     v-if="!invoiceData.is_return && invoiceData.status !== 'Cancelled' && invoiceData.docstatus === 1 && !invoiceData.update_stock && allowDeliveryNote"
                                     :options="[
@@ -125,6 +124,7 @@
                             </div>
 						</div>
 					</div>
+				</div>
 
 				<!-- Credit Sale Return Notice -->
 				<div v-if="invoiceData.is_return && isCreditSaleReturn" class="bg-gradient-to-r rtl:bg-gradient-to-l from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">

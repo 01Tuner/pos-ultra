@@ -155,6 +155,22 @@
 												<button @click="autoAllocate" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800">{{ __('Auto Allocate') }}</button>
 											</div>
 										</div>
+                                        
+                                        <div class="mt-4">
+											<label class="block text-sm font-medium text-gray-700 mb-2">{{ __('Write Off Amount') }}</label>
+											<div class="relative">
+												<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+													<span class="text-gray-500 sm:text-sm">{{ getCurrencySymbol() }}</span>
+												</div>
+												<input type="number" v-model.number="writeOffAmount" @input="autoAllocate" min="0" step="0.01" class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-12 py-3 sm:text-lg text-right font-bold border-gray-300 rounded-xl bg-yellow-50" :placeholder="__('0.00')" />
+												<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+													<span class="text-gray-500 sm:text-sm">{{ currency }}</span>
+												</div>
+											</div>
+                                            <div class="mt-2 flex justify-start">
+												<button @click="fillWriteOffOutstanding" class="text-xs font-semibold text-yellow-600 hover:text-yellow-800">{{ __('Write Off Full Outstanding') }}</button>
+											</div>
+										</div>
 
 										<div>
 											<label class="block text-sm font-medium text-gray-700 mb-2">{{ __('Mode of Payment') }}</label>
@@ -166,11 +182,11 @@
 										<div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mt-6">
 											<div class="flex justify-between items-center mb-2">
 												<span class="text-sm text-gray-600">{{ __('Amount Allocated') }}:</span>
-												<span class="font-medium" :class="totalAllocated > paymentAmount ? 'text-red-600' : 'text-gray-900'">{{ formatCurrency(totalAllocated, currency) }}</span>
+												<span class="font-medium" :class="totalAllocated > ((parseFloat(paymentAmount) || 0) + (parseFloat(writeOffAmount) || 0)) ? 'text-red-600' : 'text-gray-900'">{{ formatCurrency(totalAllocated, currency) }}</span>
 											</div>
-											<div class="flex justify-between items-center border-t border-gray-200 pt-2" v-if="paymentAmount > totalAllocated">
+											<div class="flex justify-between items-center border-t border-gray-200 pt-2" v-if="((parseFloat(paymentAmount) || 0) + (parseFloat(writeOffAmount) || 0)) > totalAllocated">
 												<span class="text-sm text-gray-600">{{ __('Unallocated Amount') }}:</span>
-												<span class="font-medium text-green-600">{{ formatCurrency(paymentAmount - totalAllocated, currency) }}</span>
+												<span class="font-medium text-green-600">{{ formatCurrency(((parseFloat(paymentAmount) || 0) + (parseFloat(writeOffAmount) || 0)) - totalAllocated, currency) }}</span>
 											</div>
 										</div>
 									</div>
@@ -182,7 +198,7 @@
 										theme="blue" 
 										class="w-full py-4 text-base font-bold rounded-xl shadow-lg hover:shadow-xl transition-all" 
 										:loading="submitting"
-										:disabled="paymentAmount <= 0 || !selectedCustomer"
+										:disabled="((parseFloat(paymentAmount) || 0) + (parseFloat(writeOffAmount) || 0)) <= 0 || !selectedCustomer"
 										@click="submitPayment"
 									>
 										{{ __('Submit Payment') }}
@@ -324,6 +340,7 @@ const selectedCustomer = ref(null);
 const invoices = ref([]);
 const loadingInvoices = ref(false);
 const paymentAmount = ref(0);
+const writeOffAmount = ref(0);
 const modeOfPayment = ref("");
 const totalAllocated = ref(0);
 const submitting = ref(false);
@@ -460,11 +477,19 @@ function recalculateTotalAllocation() {
 
 function fillFullOutstanding() {
 	paymentAmount.value = parseFloat(totalOutstanding.value);
+	writeOffAmount.value = 0;
+	autoAllocate();
+}
+
+function fillWriteOffOutstanding() {
+	let writeOff = parseFloat(totalOutstanding.value) - (parseFloat(paymentAmount.value) || 0);
+	if (writeOff < 0) writeOff = 0;
+	writeOffAmount.value = writeOff;
 	autoAllocate();
 }
 
 function autoAllocate() {
-	let remaining = parseFloat(paymentAmount.value) || 0;
+	let remaining = (parseFloat(paymentAmount.value) || 0) + (parseFloat(writeOffAmount.value) || 0);
 	invoices.value.forEach(inv => {
 		if (remaining >= inv.outstanding_amount) {
 			inv.allocated_amount = inv.outstanding_amount;
@@ -480,12 +505,13 @@ function autoAllocate() {
 }
 
 async function submitPayment() {
-	if(totalAllocated.value > paymentAmount.value) {
-		showWarning(__("Allocated amount cannot exceed Payment Amount"));
+	const totalInput = (parseFloat(paymentAmount.value) || 0) + (parseFloat(writeOffAmount.value) || 0);
+	if(totalAllocated.value > totalInput) {
+		showWarning(__("Allocated amount cannot exceed Payment Amount + Write Off"));
 		return;
 	}
-	if(paymentAmount.value <= 0) {
-		showWarning(__("Enter a valid payment amount"));
+	if(totalInput <= 0) {
+		showWarning(__("Enter a valid payment or write off amount"));
 		return;
 	}
 
@@ -501,7 +527,8 @@ async function submitPayment() {
 		const res = await call("pos_next.api.payments.create_customer_payment", {
 			customer: selectedCustomer.value.name,
 			mode_of_payment: modeOfPayment.value,
-			amount: paymentAmount.value,
+			amount: paymentAmount.value || 0,
+			write_off_amount: writeOffAmount.value || 0,
 			pos_profile: props.posProfile,
 			allocations: JSON.stringify(allocations),
 			pos_opening_shift: props.posOpeningShift
@@ -513,6 +540,7 @@ async function submitPayment() {
 		customerSearch.value = "";
 		invoices.value = [];
 		paymentAmount.value = 0;
+		writeOffAmount.value = 0;
 		totalAllocated.value = 0;
 		
 	} catch(e) {

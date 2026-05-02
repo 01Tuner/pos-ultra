@@ -352,6 +352,7 @@ def create_payment_entry(
     reference_no: Optional[str] = None,
     remarks: Optional[str] = None,
     posting_date: Optional[str] = None,
+    write_off_amount: float = 0.0,
 ) -> str:
     """
     Create a proper Payment Entry that updates Payment Ledger.
@@ -389,8 +390,9 @@ def create_payment_entry(
         frappe.throw(_("Invalid invoice name provided"))
 
     amount = flt(amount)
-    if amount <= 0:
-        frappe.throw(_("Payment amount must be greater than zero"))
+    write_off_amount = flt(write_off_amount)
+    if amount <= 0 and write_off_amount <= 0:
+        frappe.throw(_("Payment amount or write off amount must be greater than zero"))
 
     # Get invoice using ORM with permission check
     try:
@@ -406,10 +408,10 @@ def create_payment_entry(
         frappe.throw(_("Cannot add payment to cancelled invoice"))
 
     # Validate amount doesn't exceed outstanding
-    if amount > flt(invoice.outstanding_amount) + AMOUNT_TOLERANCE:
+    if (amount + write_off_amount) > flt(invoice.outstanding_amount) + AMOUNT_TOLERANCE:
         frappe.throw(
-            _("Payment amount {0} exceeds outstanding amount {1}").format(
-                frappe.format_value(amount, {"fieldtype": "Currency"}),
+            _("Total amount {0} exceeds outstanding amount {1}").format(
+                frappe.format_value(amount + write_off_amount, {"fieldtype": "Currency"}),
                 frappe.format_value(invoice.outstanding_amount, {"fieldtype": "Currency"}),
             )
         )
@@ -492,6 +494,31 @@ def create_payment_entry(
     else:
         pe.remarks = f"Payment for {invoice_name} via POS - {mode_of_payment}"
 
+    # Handle Write Off
+    if write_off_amount > 0:
+        pos_profile = invoice.get("pos_profile")
+        write_off_account = None
+        write_off_cost_center = None
+        if pos_profile:
+            profile_doc = frappe.get_cached_doc("POS Profile", pos_profile)
+            write_off_account = profile_doc.write_off_account
+            write_off_cost_center = profile_doc.write_off_cost_center
+            
+        if not write_off_account:
+            write_off_account = frappe.get_cached_value("Company", invoice.company, "write_off_account")
+        if not write_off_cost_center:
+            write_off_cost_center = frappe.get_cached_value("Company", invoice.company, "cost_center")
+            
+        if not write_off_account:
+            frappe.throw(_("Please set Write Off Account in POS Profile or Company"))
+            
+        pe.append("deductions", {
+            "account": write_off_account,
+            "cost_center": write_off_cost_center,
+            "amount": write_off_amount,
+            "description": "Write Off for POS Payment"
+        })
+
     # Link to Sales Invoice
     pe.append(
         "references",
@@ -500,7 +527,7 @@ def create_payment_entry(
             "reference_name": invoice_name,
             "total_amount": invoice.grand_total,
             "outstanding_amount": invoice.outstanding_amount,
-            "allocated_amount": amount,
+            "allocated_amount": amount + write_off_amount,
         },
     )
 
@@ -757,7 +784,7 @@ def get_partial_payment_details(invoice_name: str) -> Dict:
 
 
 @frappe.whitelist()
-def add_payment_to_partial_invoice(invoice_name: str, payments) -> Dict:
+def add_payment_to_partial_invoice(invoice_name: str, payments, write_off_amount: float = 0.0) -> Dict:
     """
     Add payments to a partially paid invoice via Payment Entry.
 
@@ -774,6 +801,7 @@ def add_payment_to_partial_invoice(invoice_name: str, payments) -> Dict:
             - amount: Payment amount (positive number)
             - account: (optional) Specific payment account
             - reference_no: (optional) Reference number
+        write_off_amount: Top-level write off amount
         Can also accept JSON string which will be parsed.
 
     Returns:
@@ -807,7 +835,16 @@ def add_payment_to_partial_invoice(invoice_name: str, payments) -> Dict:
 
     # Ensure it's a list
     if not isinstance(payments, list):
-        frappe.throw(_("Payments must be a list"))
+        payments = []
+
+    write_off_amount = flt(write_off_amount)
+    
+    if write_off_amount > 0:
+        if not payments:
+            # Need a payment method to create a payment entry, default to Cash with 0 amount
+            payments.append({"mode_of_payment": DEFAULT_PAYMENT_MODE, "amount": 0.0, "write_off_amount": write_off_amount})
+        else:
+            payments[0]["write_off_amount"] = flt(payments[0].get("write_off_amount", 0)) + write_off_amount
 
     if not payments:
         frappe.throw(_("At least one payment is required"))
@@ -823,10 +860,11 @@ def add_payment_to_partial_invoice(invoice_name: str, payments) -> Dict:
         frappe.throw(_("Invoice {0} does not exist").format(invoice_name))
 
     total_payment_amount = sum(flt(p.get("amount", 0)) for p in payments)
-    if total_payment_amount > flt(invoice.outstanding_amount) + AMOUNT_TOLERANCE:
+    total_write_off = sum(flt(p.get("write_off_amount", 0)) for p in payments)
+    if (total_payment_amount + total_write_off) > flt(invoice.outstanding_amount) + AMOUNT_TOLERANCE:
         frappe.throw(
-            _("Total payment amount {0} exceeds outstanding amount {1}").format(
-                frappe.format_value(total_payment_amount, {"fieldtype": "Currency"}),
+            _("Total payment and write off amount {0} exceeds outstanding amount {1}").format(
+                frappe.format_value(total_payment_amount + total_write_off, {"fieldtype": "Currency"}),
                 frappe.format_value(invoice.outstanding_amount, {"fieldtype": "Currency"}),
             )
         )
@@ -837,9 +875,10 @@ def add_payment_to_partial_invoice(invoice_name: str, payments) -> Dict:
     try:
         for idx, payment in enumerate(payments, 1):
             amount = flt(payment.get("amount", 0))
+            write_off_amount = flt(payment.get("write_off_amount", 0))
 
             # Skip zero amounts
-            if amount <= 0:
+            if amount <= 0 and write_off_amount <= 0:
                 frappe.log_error(
                     title=f"Skipped zero payment for {invoice_name}",
                     message=f"Payment #{idx}: {payment}"
@@ -857,6 +896,7 @@ def add_payment_to_partial_invoice(invoice_name: str, payments) -> Dict:
                 payment_account=payment_account,
                 reference_no=reference_no,
                 remarks=f"POS Payment - {mode_of_payment}",
+                write_off_amount=write_off_amount
             )
 
             payment_entries_created.append(pe_name)
