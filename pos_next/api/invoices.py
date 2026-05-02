@@ -655,6 +655,11 @@ def update_invoice(data):
                     sum(p.base_amount or 0 for p in invoice_doc.payments)
                 )
 
+            # ZATCA BR-KSA-17: credit/debit notes must have a return reason (KSA-10)
+            # Set custom_return_reason if the field exists on the doctype
+            if invoice_doc.meta.has_field("custom_return_reason") and not invoice_doc.get("custom_return_reason"):
+                invoice_doc.custom_return_reason = "Return of goods"
+
         # Validate and track POS Coupon if coupon_code is provided
         coupon_code = data.get("coupon_code")
         if coupon_code:
@@ -1805,9 +1810,10 @@ def prepare_return_invoice(invoice_name, pos_opening_shift=None):
     return_doc.set_missing_values()
     return_doc.calculate_taxes_and_totals()
 
-    # Set custom_return_reason if available
+    # ZATCA BR-KSA-17: credit/debit notes must include return reason (KSA-10)
     if return_doc.meta.has_field("custom_return_reason"):
         return_doc.custom_return_reason = "Return of goods"
+
     
     # Aggregate quantities already returned from previous return invoices
     ret_si = frappe.qb.DocType("Sales Invoice")

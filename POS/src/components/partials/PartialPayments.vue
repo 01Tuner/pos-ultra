@@ -211,13 +211,16 @@ import { formatCurrency as formatCurrencyUtil } from "@/utils/currency"
 import { getInvoiceStatusColor } from "@/utils/invoice"
 import PaymentDialog from "@/components/sale/PaymentDialog.vue"
 import { usePOSSettingsStore } from "@/stores/posSettings"
+import { usePOSShiftStore } from "@/stores/posShift"
 import { useToast } from "@/composables/useToast"
 import { useFormatters } from "@/composables/useFormatters"
+import { printPaymentEntryByInvoiceName } from "@/utils/printInvoice"
 import { Button, call } from "frappe-ui"
 import { onMounted, ref, watch } from "vue"
 
 const posSettingsStore = usePOSSettingsStore()
-const { showSuccess, showError } = useToast()
+const shiftStore = usePOSShiftStore()
+const { showSuccess, showError, showWarning } = useToast()
 const { formatDate, formatTime } = useFormatters()
 
 const props = defineProps({
@@ -329,6 +332,16 @@ async function handlePaymentCompleted(paymentData) {
 		console.log('[PartialPayments] API response:', result)
 
 		showSuccess(__("Payment added successfully"))
+
+		// Auto-print payment receipt if enabled
+		if (shiftStore.autoPrintEnabled) {
+			try {
+				await printPaymentEntryByInvoiceName(selectedInvoice.value.name)
+			} catch (printError) {
+				console.error('[PartialPayments] Auto-print failed:', printError)
+				showWarning(__("Payment recorded but print failed"))
+			}
+		}
 
 		// Reload invoices and summary
 		console.log('[PartialPayments] Reloading invoices and summary...')

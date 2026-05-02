@@ -327,7 +327,7 @@ export function useInvoice() {
 			const oldDiscount = item.discount_amount || 0
 			const oldQuantity = item.quantity
 
-			const newQuantity = Number.parseFloat(quantity) || 1
+			const newQuantity = isNaN(Number.parseFloat(quantity)) ? 1 : Number.parseFloat(quantity)
 
 			// Handle serial number items - adjust serials when quantity changes
 			if (item.has_serial_no && item.serial_no) {
@@ -843,6 +843,11 @@ export function useInvoice() {
 				}
 
 				invoiceData.is_pos = 1
+
+				// Mark as return invoice when doing a return without an original invoice reference
+				if (options.isReturnWithoutInvoice) {
+					invoiceData.is_return = 1
+				}
 
 				if (targetDoctype === "Sales Order" && deliveryDate) {
 					invoiceData.delivery_date = deliveryDate

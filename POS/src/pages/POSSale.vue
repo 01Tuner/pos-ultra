@@ -833,10 +833,10 @@ async function handleInvoicePaymentCompleted(paymentData) {
 		showSuccess(__("Payment added successfully"));
 		showInvoicePaymentDialog.value = false;
 
-		// Auto-print receipt after payment if enabled
+		// Auto-print payment receipt after payment if enabled
 		if (shiftStore.autoPrintEnabled) {
 			try {
-				await handlePrintInvoice({ name: selectedInvoiceForPayment.value.name });
+				await printPaymentEntryByInvoiceName(selectedInvoiceForPayment.value.name);
 			} catch (printError) {
 				log.error("Auto-print after payment failed:", printError);
 				showWarning(__("Payment recorded but print failed"));

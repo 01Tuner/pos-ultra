@@ -314,6 +314,7 @@ import { formatCurrency as formatCurrencyUtil } from "@/utils/currency";
 import { useToast } from "@/composables/useToast";
 import { call } from "@/utils/apiWrapper";
 import { usePOSSettingsStore } from "@/stores/posSettings";
+import { usePOSShiftStore } from "@/stores/posShift";
 import { printPaymentReceipt } from "@/utils/printInvoice";
 
 const props = defineProps({
@@ -327,6 +328,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const { showSuccess, showError, showWarning } = useToast();
+const shiftStore = usePOSShiftStore();
 const settingsStore = usePOSSettingsStore();
 
 const show = ref(props.modelValue);
@@ -536,6 +538,19 @@ async function submitPayment() {
 		});
 		
 		showSuccess(__("Payment Successful!"));
+		// Auto-print payment receipt if enabled
+		if (shiftStore.autoPrintEnabled && res?.payment_entry) {
+			try {
+				await printPaymentReceipt({
+					voucher_type: "Payment Entry",
+					voucher_no: res.payment_entry
+				});
+			} catch (printError) {
+				console.error("Auto-print failed:", printError);
+				showWarning(__("Payment recorded but print failed"));
+			}
+		}
+
 		// Reset state
 		selectedCustomer.value = null;
 		customerSearch.value = "";
@@ -555,7 +570,7 @@ async function loadPaymentHistory() {
 	loadingHistory.value = true;
 	try {
 		const res = await call("pos_next.api.payments.get_pos_profile_payments", {
-			pos_profile: props.posProfile,
+			pos_opening_shift: props.posOpeningShift,
 			limit: 50
 		});
 		history.value = res || [];

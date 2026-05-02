@@ -136,7 +136,7 @@ def create_customer_payment(customer, mode_of_payment, amount, pos_profile=None,
     return {"status": "success", "payment_entry": pe.name}
 
 @frappe.whitelist()
-def get_pos_profile_payments(pos_profile, limit=100):
+def get_pos_profile_payments(pos_opening_shift, limit=100):
     """
     Get payment entries created from this POS Profile.
     We identify them by matching reference_no like POS-PROFILE_NAME or using custom_pos_profile field if exists.
@@ -159,13 +159,10 @@ def get_pos_profile_payments(pos_profile, limit=100):
     
     if has_custom:
         query += " AND custom_pos_profile = %s "
-        values.append(pos_profile)
+        values.append(pos_opening_shift)
     else:
-        query += " AND reference_no LIKE %s "
-        values.append(f"POS-%") # Matching POS payment patterns. Wait, actually we can just use reference_no correctly.
-        # This isn't perfect without a dedicated field, but it's typical for Frappe apps that don't want to enforce custom fields immediately.
-        # Actually in partial_payments.py, reference_no is set to the opening shift.
-        # We will use this API carefully.
+        query += " AND reference_no = %s "
+        values.append(pos_opening_shift)
 
     query += " ORDER BY posting_date DESC, creation DESC LIMIT %s "
     values.append(cint(limit) if limit else 100)

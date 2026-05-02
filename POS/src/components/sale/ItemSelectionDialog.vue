@@ -157,7 +157,7 @@
 					</div>
 
 					<!-- Rate Field (only when allowEditRate is enabled) -->
-					<div v-if="props.allowEditRate && mode === 'uom'">
+					<div v-if="props.allowEditRate && mode === 'uom' && !selectedOption.rate" >
 						<label class="block text-sm font-medium text-gray-700 mb-2 text-start">{{ __('Rate') }}</label>
 						<div class="relative h-10">
 							<input

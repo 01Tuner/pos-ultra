@@ -208,7 +208,10 @@ export const usePOSCartStore = defineStore("posCart", () => {
 		const hasActualQty = item.actual_qty !== undefined || item.stock_qty !== undefined
 		const shouldValidateStock = !isNonStockItem && (item.is_stock_item || item.is_bundle || hasActualQty)
 
-		if (currentProfile && !autoAdd && settingsStore.shouldEnforceStockValidation() && shouldValidateStock && !item.has_serial_no && !item.has_batch_no) {
+		// Skip stock validation for negative quantities (return without invoice)
+		const isReturnQty = qty < 0
+
+		if (!isReturnQty && currentProfile && !autoAdd && settingsStore.shouldEnforceStockValidation() && shouldValidateStock && !item.has_serial_no && !item.has_batch_no) {
 			const warehouse = item.warehouse || currentProfile.warehouse
 			const actualQty =
 				item.actual_qty !== undefined ? item.actual_qty : item.stock_qty || 0
@@ -309,9 +312,19 @@ export const usePOSCartStore = defineStore("posCart", () => {
 			return await _submitAmendedSalesOrder()
 		}
 
-		return await baseSubmitInvoice(targetDoctype.value, deliveryDate.value, {
-			updateStockOverride: forceUpdateStock.value
-		})
+		// Detect return-without-invoice: all items have negative quantity
+		const isReturnWithoutInvoice =
+			settingsStore.allowReturnWithoutInvoice &&
+			invoiceItems.value.length > 0 &&
+			invoiceItems.value.every((i) => i.quantity < 0)
+
+		const options = {
+			updateStockOverride: forceUpdateStock.value,
+			// Signal to useInvoice to set is_return = 1 on the invoice
+			isReturnWithoutInvoice,
+		}
+
+		return await baseSubmitInvoice(targetDoctype.value, deliveryDate.value, options)
 	}
 
 	/**

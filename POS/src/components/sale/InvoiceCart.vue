@@ -1147,17 +1147,36 @@
 			</div>
 
 			<!-- Grand Total -->
-			<div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-2.5 mb-1.5">
+			<div
+				:class="[
+					'rounded-lg p-2.5 mb-1.5',
+					isReturnMode ? 'bg-gradient-to-r from-orange-50 to-red-50' : 'bg-gradient-to-r from-blue-50 to-indigo-50',
+				]"
+			>
 				<div class="flex items-center justify-between">
 					<span class="text-sm font-extrabold text-gray-900">{{
-						__("Grand Total")
+						isReturnMode ? __('Refund Total') : __("Grand Total")
 					}}</span>
 					<span
-						class="text-lg sm:text-xl font-extrabold text-blue-600 text-center min-w-[60px]"
+						:class="[
+							'text-lg sm:text-xl font-extrabold text-center min-w-[60px]',
+							isReturnMode ? 'text-orange-600' : 'text-blue-600',
+						]"
 					>
 						{{ formatCurrency(displayGrandTotal) }}
 					</span>
 				</div>
+			</div>
+
+			<!-- Return Mode Banner -->
+			<div
+				v-if="isReturnMode"
+				class="flex items-center gap-2 px-3 py-2 mb-1.5 bg-orange-50 border border-orange-200 rounded-lg"
+			>
+				<svg class="w-4 h-4 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+				</svg>
+				<span class="text-xs font-bold text-orange-700">{{ __('Return Mode – items with negative qty will be refunded') }}</span>
 			</div>
 
 			<!-- Action Buttons -->
@@ -1269,6 +1288,17 @@ const customerSearchStore = useCustomerSearchStore(); // Pinia store for custome
 const { formatQuantity } = useFormatters(); // Quantity formatting utilities
 
 async function handleProceedToPayment() {
+	// Block checkout with negative quantities for non-Invoice doctypes
+	// Negative quantities (returns) are only valid for Sales Invoice
+	const hasNegativeItems = props.items.some((item) => item.quantity < 0);
+	if (hasNegativeItems && cartStore.targetDoctype !== 'Sales Invoice') {
+		uiStore.showError(
+			__('Invalid Quantities'),
+			__('Negative quantities are not allowed in a {0}. Returns are only supported for Sales Invoices.', [cartStore.targetDoctype]),
+		);
+		return;
+	}
+
 	if (cartStore.isDeliveryNoteMode) {
 		try {
 			const result = await cartStore.submitInvoice(cartStore.targetDoctype);
@@ -1473,6 +1503,16 @@ watch(
  * @returns {Number} Count of applied offers
  */
 const appliedOfferCount = computed(() => (props.appliedOffers || []).length);
+
+/**
+ * True when at least one cart item has a negative quantity
+ * AND the current doctype is Sales Invoice (returns not supported for SO/DN).
+ */
+const isReturnMode = computed(() =>
+	settingsStore.allowReturnWithoutInvoice &&
+	cartStore.targetDoctype === 'Sales Invoice' &&
+	props.items.some((item) => item.quantity < 0)
+);
 
 /**
  * Pre-computed customer lookup map for O(1) access by ID.
@@ -1815,14 +1855,28 @@ function decrementQuantity(item) {
 	// Prevent editing resolved barcode items
 	if (item.is_resolved_barcode) return;
 
-	const step = getSmartStep(item.quantity);
+	const step = getSmartStep(Math.abs(item.quantity));
 	const newQty = Math.round((item.quantity - step) * 10000) / 10000;
 
-	if (newQty <= 0) {
-		// If quantity would be 0 or negative, remove the item
-		emit("remove-item", item.item_code, item.uom);
+	// Negative quantities only allowed for Sales Invoice when the setting is on
+	const canGoNegative =
+		settingsStore.allowReturnWithoutInvoice &&
+		cartStore.targetDoctype === 'Sales Invoice';
+
+	if (canGoNegative) {
+		if (newQty === 0) {
+			// Skip zero - go directly from 1 to -1
+			emit("update-quantity", item.item_code, -step, item.uom);
+		} else {
+			emit("update-quantity", item.item_code, newQty, item.uom);
+		}
 	} else {
-		emit("update-quantity", item.item_code, newQty, item.uom);
+		if (newQty <= 0) {
+			// Remove item if quantity would be zero or negative
+			emit("remove-item", item.item_code, item.uom);
+		} else {
+			emit("update-quantity", item.item_code, newQty, item.uom);
+		}
 	}
 }
 
@@ -1860,8 +1914,11 @@ function updateQuantity(item, value) {
  */
 function handleQuantityBlur(item) {
 	// When user leaves the input field, round and validate
-	if (!item.quantity || item.quantity <= 0) {
-		// If quantity is 0 or invalid, remove the item
+	if (!item.quantity || item.quantity === 0) {
+		// Zero quantity: remove the item
+		emit("remove-item", item.item_code, item.uom);
+	} else if (item.quantity < 0 && !settingsStore.allowReturnWithoutInvoice) {
+		// Negative quantity only allowed when 'Allow Return Without Invoice' is enabled
 		emit("remove-item", item.item_code, item.uom);
 	} else {
 		// Round to 4 decimal places for consistency

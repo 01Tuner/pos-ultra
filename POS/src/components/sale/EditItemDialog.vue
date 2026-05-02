@@ -102,7 +102,7 @@
 																<input
 																	v-model.number="localQuantity"
 																	type="number"
-																	min="0.0001"
+																	:min="canGoNegative ? undefined : '0.0001'"
 																	step="any"
 																	inputmode="decimal"
 																	class="w-full text-center border-0 text-sm font-semibold focus:outline-none focus:ring-0 bg-transparent"
@@ -294,6 +294,14 @@ import SelectInput from "@/components/common/SelectInput.vue"
 const { showSuccess, showError, showWarning } = useToast()
 const settingsStore = usePOSSettingsStore()
 const serialStore = useSerialNumberStore()
+import { usePOSCartStore } from "@/stores/posCart"
+const cartStore = usePOSCartStore()
+
+/** True only when returns (negative qty) are allowed in the current context */
+const canGoNegative = computed(() =>
+	settingsStore.allowReturnWithoutInvoice &&
+	cartStore.targetDoctype === 'Sales Invoice'
+)
 
 const props = defineProps({
 	modelValue: Boolean,
@@ -459,27 +467,33 @@ function incrementQuantity() {
 }
 
 function decrementQuantity() {
-	const step = getSmartStep(localQuantity.value)
+	const step = getSmartStep(Math.abs(localQuantity.value))
 	const newQty = Math.round((localQuantity.value - step) * 10000) / 10000
 
-	if (newQty > 0) {
+	if (canGoNegative.value) {
+		// Allow going negative - skip zero
+		localQuantity.value = newQty === 0 ? -step : newQty
+	} else if (newQty > 0) {
 		localQuantity.value = newQty
-		calculateTotals()
 	}
+	calculateTotals()
 }
 
 function handleQuantityInput() {
 	// Allow any value during typing, just recalculate totals
 	// Don't validate or reset - let user type freely
-	if (localQuantity.value > 0 && !isNaN(localQuantity.value)) {
+	if (localQuantity.value !== 0 && !isNaN(localQuantity.value)) {
 		calculateTotals()
 	}
 }
 
 function handleQuantityBlur() {
 	// Validate and fix the quantity when user is done editing (leaves the field)
-	if (!localQuantity.value || localQuantity.value <= 0 || isNaN(localQuantity.value)) {
-		// If invalid, reset to 1
+	if (!localQuantity.value || localQuantity.value === 0 || isNaN(localQuantity.value)) {
+		// If invalid or zero, reset to 1
+		localQuantity.value = 1
+	} else if (localQuantity.value < 0 && !canGoNegative.value) {
+		// Negative quantity only allowed for Sales Invoice when setting is enabled
 		localQuantity.value = 1
 	} else {
 		// Round to 4 decimal places for consistency
