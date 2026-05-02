@@ -339,8 +339,8 @@ const customerList = ref([]);
 const selectedCustomer = ref(null);
 const invoices = ref([]);
 const loadingInvoices = ref(false);
-const paymentAmount = ref(0);
-const writeOffAmount = ref(0);
+const paymentAmount = ref("");
+const writeOffAmount = ref("");
 const modeOfPayment = ref("");
 const totalAllocated = ref(0);
 const submitting = ref(false);
@@ -441,7 +441,8 @@ function selectCustomer(cust) {
 	selectedCustomer.value = cust;
 	customerSearch.value = cust.customer_name;
 	showCustomerDropdown.value = false;
-	paymentAmount.value = 0;
+	paymentAmount.value = "";
+	writeOffAmount.value = "";
 	totalAllocated.value = 0;
 	loadInvoices();
 }
@@ -477,7 +478,7 @@ function recalculateTotalAllocation() {
 
 function fillFullOutstanding() {
 	paymentAmount.value = parseFloat(totalOutstanding.value);
-	writeOffAmount.value = 0;
+	writeOffAmount.value = "";
 	autoAllocate();
 }
 
@@ -539,8 +540,8 @@ async function submitPayment() {
 		selectedCustomer.value = null;
 		customerSearch.value = "";
 		invoices.value = [];
-		paymentAmount.value = 0;
-		writeOffAmount.value = 0;
+		paymentAmount.value = "";
+		writeOffAmount.value = "";
 		totalAllocated.value = 0;
 		
 	} catch(e) {

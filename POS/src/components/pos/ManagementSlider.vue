@@ -121,10 +121,12 @@
 								</button>
 
 								<!-- Stock Transfer -->
-				<button v-if="settingsStore.enableStockTransfer" @click="handleMenuClick('stock_transfer')" :class="getMenuClass('stock_transfer')" :title="__('Stock Transfer')">
-					<FeatherIcon name="refresh-cw" class="w-5 h-5" />
-					<div class="tooltip">{{ __('Stock Transfer') }}</div>
-				</button>
+								<button v-if="settingsStore.enableStockTransfer" @click="handleMenuClick('stock_transfer')" class="plus-menu-item">
+									<div class="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+										<FeatherIcon name="refresh-cw" class="w-5 h-5" />
+									</div>
+									<span class="font-medium text-gray-700">{{ __('Stock Transfer') }}</span>
+								</button>
 
 				<!-- Delivery Notes -->
 								<button v-if="settingsStore.enableDeliveryNote" @click="handleMenuClick('delivery_notes')" class="plus-menu-item">

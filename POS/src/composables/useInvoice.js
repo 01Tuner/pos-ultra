@@ -26,6 +26,7 @@ export function useInvoice() {
 	const posProfile = ref(null)
 	const posOpeningShift = ref(null) // POS Opening Shift name
 	const additionalDiscount = ref(0)
+	const writeOffAmount = ref(0)
 	const couponCode = ref(null)
 	const taxRules = ref([]) // Tax rules from POS Profile
 	const taxInclusive = ref(false) // Tax inclusive setting from POS Settings
@@ -996,6 +997,7 @@ export function useInvoice() {
 		invoiceItems.value = []
 		payments.value = []
 		additionalDiscount.value = 0
+		writeOffAmount.value = 0
 		couponCode.value = null
 		currentInvoiceName.value = null
 
@@ -1024,6 +1026,7 @@ export function useInvoice() {
 		invoiceItems.value = []
 		payments.value = []
 		additionalDiscount.value = 0
+		writeOffAmount.value = 0
 		couponCode.value = null
 		currentInvoiceName.value = null
 
@@ -1100,6 +1103,7 @@ export function useInvoice() {
 		posProfile,
 		posOpeningShift,
 		additionalDiscount,
+		writeOffAmount,
 		couponCode,
 		taxRules,
 		taxInclusive,

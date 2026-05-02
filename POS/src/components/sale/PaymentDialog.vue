@@ -834,7 +834,7 @@
 						</div>
                         
                         <!-- Write Off Amount -->
-                        <div class="mt-4">
+                        <div class="hidden lg:block mt-4">
                             <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Write Off Amount') }}</label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -995,7 +995,7 @@ const paymentMethods = ref([])
 const loadingPaymentMethods = ref(false)
 const lastSelectedMethod = ref(null)
 const customAmount = ref("")
-const writeOffAmount = ref(0)
+const writeOffAmount = ref("")
 const paymentEntries = ref([])
 const customerCredit = ref([])
 const customerBalance = ref({ total_outstanding: 0, total_credit: 0, net_balance: 0 })
@@ -1596,6 +1596,7 @@ watch(show, (newVal) => {
 		customAmount.value = ""
 		numpadClear()
 		mobileCustomAmount.value = ""
+		writeOffAmount.value = ""
 		lastSelectedMethod.value = null
 		customerCredit.value = []
 		customerBalance.value = { total_outstanding: 0, total_credit: 0, net_balance: 0 }
