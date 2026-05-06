@@ -379,6 +379,9 @@
 							<h3 class="text-[10px] sm:text-xs font-semibold text-gray-900 truncate mb-0.5 leading-tight">
 								{{ item.item_name }}
 							</h3>
+							<div v-if="settingsStore.displayItemCode" class="text-[9px] sm:text-[10px] text-gray-500 truncate mb-0.5 leading-tight">
+								{{ item.item_code }}
+							</div>
 							<p class="text-[9px] sm:text-[10px] text-gray-500 leading-tight">
 									<span class="font-semibold text-blue-600">{{ formatCurrency(item.rate || item.price_list_rate || 0) }}</span>
 									<span class="text-gray-400">/ {{ item.uom || item.stock_uom || __('Nos', null, 'UOM') }}</span>
@@ -762,7 +765,7 @@ const {
 } = storeToRefs(itemStore)
 
 // Local state
-const viewMode = ref("grid")
+const viewMode = ref(settingsStore.defaultCardView ? "grid" : "list")
 const lastKeyTime = ref(0)
 const barcodeBuffer = ref("")
 const searchInputRef = ref(null)
@@ -881,6 +884,17 @@ watch(
 	{ immediate: true },
 )
 
+// Watch for setting changes to respect default view mode
+watch(
+	() => settingsStore.defaultCardView,
+	(isCardView) => {
+		if (!userManuallySetView.value) {
+			viewMode.value = isCardView ? "grid" : "list"
+		}
+	},
+	{ immediate: true }
+)
+
 // Reset to page 1 when filtered items meaningfully change
 watch(
 	filteredItems,
@@ -903,8 +917,10 @@ watch(
 
 		// Only auto-switch if user hasn't manually set a preference
 		// and we're in grid view with many items
+		// AND they don't have defaultCardView explicitly enabled in settings
 		if (
 			!userManuallySetView.value &&
+			!settingsStore.defaultCardView &&
 			viewMode.value === "grid" &&
 			itemCount > itemThreshold.value
 		) {

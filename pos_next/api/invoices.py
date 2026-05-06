@@ -605,7 +605,7 @@ def update_invoice(data):
         # Populate missing fields (company, currency, accounts, etc.)
         invoice_doc.set_missing_values()
 
-        # ERPNext's set_missing_values -> set_pos_fields explicitly overrides update_stock 
+        # ERPNext's set_missing_values -\u003e set_pos_fields explicitly overrides update_stock 
         # based on the POS Profile. We must restore it to prevent validation errors 
         # when converting from Delivery Notes.
         if doctype == "Sales Invoice":
@@ -616,6 +616,31 @@ def update_invoice(data):
                         final_update_stock = 0
                         break
             invoice_doc.update_stock = final_update_stock
+
+        # Restore user-provided payments after set_missing_values() resets them.
+        # ERPNext's set_pos_fields() replaces the payments table with POS profile defaults
+        # (amount=0). If the frontend sent payments with actual amounts, we must restore them.
+        user_payments = data.get("payments", [])
+        if user_payments and isinstance(user_payments, list):
+            # Check if any user payment has a non-zero amount
+            user_payments_with_amount = [
+                p for p in user_payments
+                if flt(p.get("amount", 0)) != 0
+            ]
+            if user_payments_with_amount and doctype == "Sales Invoice":
+                # Build a lookup from mode_of_payment -> amount from user payments
+                user_payment_amounts = {}
+                for p in user_payments:
+                    mop = p.get("mode_of_payment")
+                    amt = flt(p.get("amount", 0))
+                    if mop and amt != 0:
+                        user_payment_amounts[mop] = amt
+
+                # Apply user amounts to the invoice payments (set by ERPNext from POS profile)
+                for payment in invoice_doc.payments:
+                    mop = payment.get("mode_of_payment")
+                    if mop and mop in user_payment_amounts:
+                        payment.amount = user_payment_amounts[mop]
 
         # Calculate totals and apply discounts (with rounding disabled)
         invoice_doc.calculate_taxes_and_totals()
@@ -1111,6 +1136,32 @@ def submit_invoice(invoice=None, data=None):
         # Validate stock availability only if negative stock is not allowed
         if not pos_settings_allow_negative:
             _validate_stock_on_invoice(invoice_doc)
+
+        # For return invoices: ensure payment amounts are correctly set (negative)
+        # ERPNext's save hooks may reset payment amounts from POS profile defaults.
+        # We restore them here from the invoice data just before final save+submit.
+        if invoice_doc.get("is_return") and invoice_doc.get("payments"):
+            # Build lookup from user-provided invoice payments
+            invoice_payments = invoice.get("payments", []) or []
+            user_payment_amounts = {}
+            for p in invoice_payments:
+                mop = p.get("mode_of_payment")
+                amt = flt(p.get("amount", 0))
+                if mop and amt != 0:
+                    user_payment_amounts[mop] = amt
+
+            if user_payment_amounts:
+                # Apply user-specified amounts to the doc payments
+                for payment in invoice_doc.payments:
+                    mop = payment.get("mode_of_payment")
+                    if mop and mop in user_payment_amounts:
+                        # Ensure amount is negative (refund direction)
+                        payment.amount = -abs(user_payment_amounts[mop])
+
+            # Recalculate paid_amount from corrected payments
+            total_paid = flt(sum(-abs(p.amount) for p in invoice_doc.payments))
+            invoice_doc.paid_amount = total_paid
+            invoice_doc.base_paid_amount = total_paid
 
         # Save before submit
         invoice_doc.flags.ignore_permissions = True

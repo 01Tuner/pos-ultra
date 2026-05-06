@@ -883,9 +883,14 @@ export function useInvoice() {
 				// Store the draft name for retries
 				currentInvoiceName.value = invoiceDoc.name
 
+				const isReturnInvoice = invoiceItems.value.every(item => (item.quantity || item.qty || 0) < 0)
+
 				const submitData = {
-					change_amount:
-						remainingAmount.value < 0 ? Math.abs(remainingAmount.value) : 0,
+					// For return invoices, change_amount is always 0 — backend handles refund direction
+					// For normal sales, change_amount = overpayment (cash tendered - total)
+					change_amount: isReturnInvoice
+						? 0
+						: (remainingAmount.value < 0 ? Math.abs(remainingAmount.value) : 0),
 				}
 
 				try {

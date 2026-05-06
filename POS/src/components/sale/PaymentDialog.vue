@@ -389,32 +389,37 @@
 							</div>
 							<!-- Grand Total -->
 							<div class="flex items-center justify-between pt-2 mt-1 border-t border-gray-300">
-								<span :class="['font-bold text-gray-900 text-start', isCompactMode ? 'text-sm' : 'text-base']">{{ __('Grand Total') }}</span>
-								<span :class="['font-bold text-gray-900 text-end', dynamicTextSize.grandTotal]">{{ formatCurrency(grandTotal) }}</span>
+								<span :class="['font-bold text-start', isCompactMode ? 'text-sm' : 'text-base', isReturnMode ? 'text-red-700' : 'text-gray-900']">{{ isReturnMode ? __('Refund Total') : __('Grand Total') }}</span>
+								<span :class="['font-bold text-end', dynamicTextSize.grandTotal, isReturnMode ? 'text-red-600' : 'text-gray-900']">{{ isReturnMode ? formatCurrency(refundAmount) : formatCurrency(grandTotal) }}</span>
 							</div>
 						</div>
 
 						<!-- Payment Status - Two Equal Halves -->
 						<div class="border-t border-gray-200">
 							<div class="grid grid-cols-2 divide-x divide-gray-200">
-								<!-- Paid (Left Half) -->
-								<div :class="['bg-blue-50 text-center', isCompactMode ? 'p-2' : 'p-3']">
-									<div class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{{ __('Paid') }}</div>
-									<div :class="['font-bold text-blue-600', dynamicTextSize.amount]">{{ formatCurrency(totalPaid) }}</div>
+								<!-- Paid / Return Amount (Left Half) -->
+								<div :class="['text-center', isCompactMode ? 'p-2' : 'p-3', isReturnMode ? 'bg-red-50' : 'bg-blue-50']">
+									<div :class="['text-xs font-medium uppercase tracking-wide mb-1', isReturnMode ? 'text-red-500' : 'text-gray-500']">{{ isReturnMode ? __('Return Amt') : __('Paid') }}</div>
+									<div :class="['font-bold', dynamicTextSize.amount, isReturnMode ? 'text-red-600' : 'text-blue-600']">{{ isReturnMode ? formatCurrency(refundAmount) : formatCurrency(totalPaid) }}</div>
 								</div>
-								<!-- Remaining / Change (Right Half) -->
-								<div v-if="remainingAmount > 0" :class="['bg-orange-50 text-center', isCompactMode ? 'p-2' : 'p-3']">
+								<!-- Remaining / Change / Ready (Right Half) -->
+								<div v-if="!isReturnMode && remainingAmount > 0" :class="['bg-orange-50 text-center', isCompactMode ? 'p-2' : 'p-3']">
 									<div class="text-xs font-medium text-orange-600 uppercase tracking-wide mb-1">{{ __('Remaining') }}</div>
 									<div :class="['font-bold text-orange-600', dynamicTextSize.amount]">{{ formatCurrency(remainingAmount) }}</div>
 								</div>
-								<div v-else-if="changeAmount > 0 && allowsOverpayment" :class="['bg-green-50 text-center', isCompactMode ? 'p-2' : 'p-3']">
+								<div v-else-if="!isReturnMode && changeAmount > 0 && allowsOverpayment" :class="['bg-green-50 text-center', isCompactMode ? 'p-2' : 'p-3']">
 									<div class="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">{{ __('Change Due') }}</div>
 									<div :class="['font-bold text-green-600', dynamicTextSize.amount]">{{ formatCurrency(changeAmount) }}</div>
 								</div>
 								<!-- Exact Amount Warning (when overpayment not allowed) -->
-								<div v-else-if="changeAmount > 0 && !allowsOverpayment" :class="['bg-red-50 text-center', isCompactMode ? 'p-2' : 'p-3']">
+								<div v-else-if="!isReturnMode && changeAmount > 0 && !allowsOverpayment" :class="['bg-red-50 text-center', isCompactMode ? 'p-2' : 'p-3']">
 									<div class="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">{{ __('Overpayment') }}</div>
 									<div :class="['font-bold text-red-600', dynamicTextSize.amount]">{{ formatCurrency(changeAmount) }}</div>
+								</div>
+								<!-- Return Mode: Ready to process -->
+								<div v-else-if="isReturnMode" :class="['bg-red-50 flex flex-col items-center justify-center', isCompactMode ? 'p-2' : 'p-3']">
+									<svg class="w-5 h-5 text-red-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+									<span :class="['font-bold text-red-600', dynamicTextSize.body]">{{ __('Return Ready') }}</span>
 								</div>
 								<div v-else :class="['bg-green-50 flex flex-col items-center justify-center', isCompactMode ? 'p-2' : 'p-3']">
 									<svg class="w-5 h-5 text-green-600 mb-1" fill="currentColor" viewBox="0 0 20 20">
@@ -634,8 +639,18 @@
 							<p :class="isSmallMobile ? 'text-[10px]' : 'text-xs'" class="text-blue-600">{{ __('Select a payment method') }}</p>
 						</div>
 
-                        <!-- Mobile Write Off Amount -->
-                        <div class="mb-2">
+						<!-- Mobile: Return Mode Info Banner -->
+						<div v-if="isReturnMode" :class="['bg-red-50 border border-red-200 rounded-lg text-center', isSmallMobile ? 'p-2 mb-1' : 'p-3 mb-1.5']">
+							<p :class="isSmallMobile ? 'text-[10px]' : 'text-xs'" class="text-red-700 font-semibold">
+								{{ __('Refund {0} to customer', [formatCurrency(refundAmount)]) }}
+							</p>
+							<p :class="isSmallMobile ? 'text-[10px]' : 'text-xs'" class="text-red-600 mt-0.5">
+								{{ lastSelectedMethod ? __('Select payment method above then tap Process Return') : __('Select a payment method to refund, or tap Process Return') }}
+							</p>
+						</div>
+
+                        <!-- Mobile Write Off Amount (hidden for returns) -->
+                        <div v-if="!isReturnMode" class="mb-2">
                             <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Write Off Amount') }}</label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
@@ -653,8 +668,23 @@
 
 						<!-- Mobile Action Buttons - Always visible at bottom -->
 						<div :class="['flex-shrink-0', isSmallMobile ? 'space-y-1' : 'space-y-1.5']">
+							<!-- Pay on Account: standalone button for return mode or when no payment method selected yet -->
+							<div v-if="isReturnMode && allowCreditSale && paymentEntries.length === 0"
+								:class="isSmallMobile ? 'mb-1' : 'mb-1.5'">
+								<button
+									@click="addCreditAccountPayment"
+									:disabled="isSubmitting"
+									:class="[
+										'w-full font-semibold rounded-lg flex items-center justify-center',
+										isSubmitting ? 'bg-orange-300 text-white cursor-not-allowed' : 'bg-orange-500 text-white active:bg-orange-600',
+										mobileButtonSize.height, mobileButtonSize.text, mobileButtonSize.gap
+									]"
+								>
+									<span>{{ isSubmitting ? __('Processing...') : __('On Account') }}</span>
+								</button>
+							</div>
 							<!-- Two buttons side by side when both needed -->
-							<div v-if="lastSelectedMethod && remainingAmount > 0 && allowCreditSale && paymentEntries.length === 0"
+							<div v-if="!isReturnMode && lastSelectedMethod && remainingAmount > 0 && allowCreditSale && paymentEntries.length === 0"
 								class="grid grid-cols-2" :class="isSmallMobile ? 'gap-1' : 'gap-1.5'">
 								<!-- Pay Full Amount Button -->
 								<button
@@ -694,7 +724,7 @@
 
 							<!-- Single Pay button (when no credit sale option) -->
 							<button
-								v-else-if="lastSelectedMethod && remainingAmount > 0 && totalPaid === 0"
+								v-else-if="!isReturnMode && lastSelectedMethod && remainingAmount > 0 && totalPaid === 0"
 								@click="addCustomPayment(lastSelectedMethod, remainingAmount)"
 								:disabled="isSubmitting"
 								:class="[
@@ -713,7 +743,7 @@
 
 							<!-- Complete Payment Button -->
 							<button
-								v-if="totalPaid > 0"
+								v-if="totalPaid > 0 || isReturnMode"
 								@click="completePayment"
 								:disabled="isSubmitting"
 								:class="[
@@ -833,8 +863,8 @@
 							</div>
 						</div>
                         
-                        <!-- Write Off Amount -->
-                        <div class="hidden lg:block mt-4">
+                        <!-- Write Off Amount (hidden for returns) -->
+                        <div v-if="!isReturnMode" class="hidden lg:block mt-4">
                             <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Write Off Amount') }}</label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -883,8 +913,8 @@
 								'flex-1 inline-flex items-center justify-center gap-2 transition-colors focus:outline-none',
 								dynamicButtonHeight, 'text-sm font-semibold px-5 rounded-lg',
 								!canComplete || isSubmitting
-									? 'bg-blue-300 text-white cursor-not-allowed'
-									: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-2 focus-visible:ring-blue-400'
+									? (isReturnMode ? 'bg-red-300 text-white cursor-not-allowed' : 'bg-blue-300 text-white cursor-not-allowed')
+									: (isReturnMode ? 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-2 focus-visible:ring-red-400' : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-2 focus-visible:ring-blue-400')
 							]"
 						>
 							<svg v-if="isSubmitting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1457,12 +1487,25 @@ const calculatedAdditionalDiscount = computed(() => {
 	return round2(localAdditionalDiscount.value)
 })
 
+// Whether this is a return/refund invoice (negative grand total)
+const isReturnMode = computed(() => props.grandTotal < 0)
+
+// The absolute refund amount (used for display and UI visibility in return mode)
+const refundAmount = computed(() => round2(Math.abs(props.grandTotal)))
+
 const remainingAmount = computed(() => {
+	// For returns (negative grandTotal), use the absolute refund amount
+	// so UI elements that check remainingAmount > 0 still work correctly
+	if (isReturnMode.value) {
+		const remaining = refundAmount.value - totalPaid.value - (Number(writeOffAmount.value) || 0)
+		return remaining > 0 ? round2(remaining) : 0
+	}
 	const remaining = round2(props.grandTotal) - totalPaid.value - (Number(writeOffAmount.value) || 0)
 	return remaining > 0 ? round2(remaining) : 0
 })
 
 const changeAmount = computed(() => {
+	if (isReturnMode.value) return 0
 	const change = totalPaid.value - round2(props.grandTotal)
 	return change > 0 ? round2(change) : 0
 })
@@ -1533,6 +1576,12 @@ const canComplete = computed(() => {
 		return false
 	}
 
+	// For return mode (negative grand total): allow immediate completion
+	// No payment entry required — the backend creates a credit note
+	if (isReturnMode.value) {
+		return true
+	}
+
 	// Check exact amount validation
 	if (!isExactAmountValid.value) {
 		return false
@@ -1547,6 +1596,9 @@ const canComplete = computed(() => {
 })
 
 const paymentButtonText = computed(() => {
+	if (isReturnMode.value) {
+		return __("Process Return")
+	}
 	if (remainingAmount.value === 0) {
 		return __("Complete Payment")
 	}
@@ -1927,6 +1979,7 @@ function fillWriteOffOutstanding() {
 function completePayment() {
 	log.debug('[PaymentDialog] Complete payment called:', {
 		canComplete: canComplete.value,
+		isReturnMode: isReturnMode.value,
 		totalPaid: totalPaid.value,
 		grandTotal: props.grandTotal,
 		allowPartialPayment: props.allowPartialPayment,
@@ -1936,6 +1989,26 @@ function completePayment() {
 
 	if (!canComplete.value) {
 		log.warn('[PaymentDialog] Cannot complete - validation failed')
+		return
+	}
+
+	// For return mode (negative grandTotal): complete with no payments
+	// The backend creates a credit note / return invoice
+	if (isReturnMode.value) {
+		const paymentData = {
+			payments: paymentEntries.value,
+			change_amount: 0,
+			is_partial_payment: false,
+			is_return: true,
+			paid_amount: totalPaid.value,
+			outstanding_amount: 0,
+			sales_team: selectedSalesPersons.value.length > 0 ? selectedSalesPersons.value : null,
+			delivery_date: null,
+			write_off_amount: 0,
+		}
+		log.debug('[PaymentDialog] Emitting return payment-completed:', paymentData)
+		emit("payment-completed", paymentData)
+		show.value = false
 		return
 	}
 

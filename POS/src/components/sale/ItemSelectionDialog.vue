@@ -157,7 +157,7 @@
 					</div>
 
 					<!-- Rate Field (only when allowEditRate is enabled) -->
-					<div v-if="props.allowEditRate && mode === 'uom' && !selectedOption.rate" >
+					<div v-if="props.allowEditRate && mode === 'uom'" >
 						<label class="block text-sm font-medium text-gray-700 mb-2 text-start">{{ __('Rate') }}</label>
 						<div class="relative h-10">
 							<input
@@ -498,6 +498,7 @@ async function loadOptions() {
 			}
 		}
 		loading.value = false
+		localRate.value = selectedOption.value?.rate || 0
 	}
 }
 
@@ -566,6 +567,7 @@ function selectAttribute(attributeName, value) {
 
 function selectOption(option) {
 	selectedOption.value = option
+	localRate.value = selectedOption.value?.rate || 0
 }
 
 function confirm() {
