@@ -5,6 +5,56 @@ import { logger } from "@/utils/logger"
 const log = logger.create('PrintInvoice')
 
 /**
+ * Opens an HTML string as a Blob URL in a new tab.
+ * Avoids window.print() which is unsupported on Android WebView/Chrome.
+ * The user can print from the browser's native share/print menu.
+ */
+function openHtmlBlob(html) {
+	const blob = new Blob([html], { type: 'text/html' })
+	const blobUrl = URL.createObjectURL(blob)
+	const win = window.open(blobUrl, '_blank')
+	if (win) {
+		win.onload = () => URL.revokeObjectURL(blobUrl)
+	} else {
+		// Popup blocked — fall back to download
+		const a = document.createElement('a')
+		a.href = blobUrl
+		a.download = 'receipt.html'
+		document.body.appendChild(a)
+		a.click()
+		document.body.removeChild(a)
+		setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+	}
+}
+
+/**
+ * Fetches Frappe's PDF download endpoint and opens the result as a Blob URL.
+ * Works on Android because it opens a native PDF viewer tab instead of
+ * relying on window.print().
+ */
+async function openFrappePdfBlob(urlParams) {
+	const pdfUrl = `/api/method/frappe.utils.print_format.download_pdf?${urlParams}`
+	const response = await fetch(pdfUrl, { credentials: 'same-origin' })
+	if (!response.ok) throw new Error(`PDF fetch failed: ${response.status}`)
+	const blob = await response.blob()
+	const blobUrl = URL.createObjectURL(blob)
+	const win = window.open(blobUrl, '_blank')
+	if (win) {
+		// Revoke after a generous delay so the PDF has time to load
+		win.addEventListener('load', () => setTimeout(() => URL.revokeObjectURL(blobUrl), 30000))
+	} else {
+		// Popup blocked — trigger download instead
+		const a = document.createElement('a')
+		a.href = blobUrl
+		a.download = 'document.pdf'
+		document.body.appendChild(a)
+		a.click()
+		document.body.removeChild(a)
+		setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+	}
+}
+
+/**
 * Print invoice using Frappe's print format system
 * @param {Object} invoiceData - The invoice document data
 * @param {string} printFormat - The print format name (optional)
@@ -23,14 +73,11 @@ export async function printInvoice(
 
 		const doctype = invoiceData.doctype || "Sales Invoice"
 
-		// Build PDF print URL
 		const params = new URLSearchParams({
 			doctype: doctype,
 			name: invoiceData.name,
 			no_letterhead: letterhead ? 0 : 1,
 			_lang: "en",
-			trigger_print: 1,
-			_t: Date.now(), // Cache buster to force fresh print format
 		})
 
 		if (printFormat) {
@@ -41,23 +88,11 @@ export async function printInvoice(
 			params.append("letterhead", letterhead)
 		}
 
-		// Open PDF in new window - browser will handle print dialog
-		const printUrl = `/printview?${params.toString()}`
-		const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
-
-		if (!printWindow) {
-			throw new Error(
-				"Failed to open print window. Please check your popup blocker settings.",
-			)
-		}
-
-		// Auto-close after print dialog is dismissed (Print or Cancel)
-		printWindow.addEventListener('afterprint', () => printWindow.close())
+		await openFrappePdfBlob(params.toString())
 
 		return true
 	} catch (error) {
 		log.error("Error printing with Frappe print format:", error)
-		// Fallback to custom print format
 		return printInvoiceCustom(invoiceData)
 	}
 }
@@ -85,9 +120,6 @@ export async function printInvoice(
 * @param {number} invoiceData.grand_total - Invoice total amount
 */
 export function printInvoiceCustom(invoiceData) {
-	// Open print window with receipt size dimensions (80mm ≈ 302px at 96 DPI)
-	const printWindow = window.open("", "_blank", "width=350,height=600")
-
 	const printContent = `
 <!DOCTYPE html>
 <html>
@@ -446,28 +478,11 @@ export function printInvoiceCustom(invoiceData) {
 				</div>
 			</div>
 
-			<div class="no-print" style="text-align: center; margin-top: 20px;">
-				<button onclick="window.print()" style="padding: 10px 20px; font-size: 14px; cursor: pointer;">
-					${__('Print Receipt')}
-				</button>
-				<button onclick="window.close()" style="padding: 10px 20px; font-size: 14px; cursor: pointer; margin-left: 10px;">
-					${__('Close')}
-				</button>
-			</div>
 		</body>
-		</html>
+	</html>
 `
 
-	printWindow.document.write(printContent)
-	printWindow.document.close()
-
-	// Auto print after load, then auto-close when done
-	printWindow.onload = () => {
-		setTimeout(() => {
-			printWindow.print()
-		}, 250)
-	}
-	printWindow.addEventListener('afterprint', () => printWindow.close())
+	openHtmlBlob(printContent)
 }
 
 function formatCurrency(amount) {
@@ -544,22 +559,15 @@ export async function printPaymentReceipt(paymentData) {
 		}
 
 		if (paymentData.voucher_type === "Payment Entry") {
-			// For Payment Entry, use standard Frappe print view
 			const params = new URLSearchParams({
 				doctype: "Payment Entry",
 				name: paymentData.voucher_no,
-				format: "Standard", // Or a specific receipt format if available
-				trigger_print: 1,
+				format: "Standard",
 				no_letterhead: 1,
 				_lang: "en",
 			})
-			const printUrl = `/printview?${params.toString()}`
-			const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
-			if (!printWindow) throw new Error("Popup blocked")
-			// Auto-close after print dialog is dismissed
-			printWindow.addEventListener('afterprint', () => printWindow.close())
+			await openFrappePdfBlob(params.toString())
 		} else if (paymentData.voucher_type === "Sales Invoice") {
-			// For POS payments (Sales Invoice), print the full invoice
 			await printInvoiceByName(paymentData.voucher_no)
 		} else {
 			throw new Error(`Unsupported voucher type: ${paymentData.voucher_type}`)
@@ -584,27 +592,10 @@ export async function printSalesOrderByName(orderName) {
 		const params = new URLSearchParams({
 			doctype: "Sales Order",
 			name: orderName,
-			trigger_print: 1,
 			no_letterhead: 0,
-			_t: Date.now(),
 		})
 
-		const printUrl = `/printview?${params.toString()}`
-		// Use explicit popup features to force a popup window (not a tab)
-		const printWindow = window.open(
-			printUrl,
-			'pos_print_so',
-			'width=900,height=700,toolbar=0,scrollbars=1,status=0,resizable=1'
-		)
-
-		if (!printWindow) {
-			throw new Error(
-				"Failed to open print window. Please check your popup blocker settings.",
-			)
-		}
-
-		// Auto-close after print dialog is dismissed (Print or Cancel)
-		printWindow.addEventListener('afterprint', () => printWindow.close())
+		await openFrappePdfBlob(params.toString())
 
 		return true
 	} catch (error) {
@@ -626,27 +617,10 @@ export async function printDeliveryNoteByName(dnName) {
 		const params = new URLSearchParams({
 			doctype: "Delivery Note",
 			name: dnName,
-			trigger_print: 1,
 			no_letterhead: 0,
-			_t: Date.now(),
 		})
 
-		const printUrl = `/printview?${params.toString()}`
-		// Use explicit popup features to force a popup window (not a tab)
-		const printWindow = window.open(
-			printUrl,
-			'pos_print_dn',
-			'width=900,height=700,toolbar=0,scrollbars=1,status=0,resizable=1'
-		)
-
-		if (!printWindow) {
-			throw new Error(
-				"Failed to open print window. Please check your popup blocker settings.",
-			)
-		}
-
-		// Auto-close after print dialog is dismissed (Print or Cancel)
-		printWindow.addEventListener('afterprint', () => printWindow.close())
+		await openFrappePdfBlob(params.toString())
 
 		return true
 	} catch (error) {
@@ -683,15 +657,9 @@ export async function printPaymentEntryByInvoiceName(invoiceName) {
 			const params = new URLSearchParams({
 				doctype: "Payment Entry",
 				name: paymentEntryName,
-				trigger_print: 1,
 				no_letterhead: 0,
-				_t: Date.now(),
 			})
-			const printUrl = `/printview?${params.toString()}`
-			const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
-			if (!printWindow) throw new Error("Popup blocked")
-			// Auto-close after print dialog is dismissed
-			printWindow.addEventListener('afterprint', () => printWindow.close())
+			await openFrappePdfBlob(params.toString())
 			return true
 		}
 

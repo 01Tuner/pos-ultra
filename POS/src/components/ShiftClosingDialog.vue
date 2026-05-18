@@ -663,59 +663,44 @@ function printShift() {
 	const printArea = document.getElementById('shift-closing-print-area')
 	if (!printArea) return
 
-	// Collect all existing stylesheet hrefs to re-link them
+	// Collect stylesheet links from the current page to include in the blob document
 	const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-		.map(el => el.href)
-		.filter(Boolean)
+		.map(el => `<link rel="stylesheet" href="${el.href}">`)
+		.join('\n')
 
-	// Build a temporary print container and inject it into <body>
-	const printContainerId = 'pos-shift-print-root'
-	let existing = document.getElementById(printContainerId)
-	if (existing) existing.remove()
+	const html = `<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>${__('Shift Close Report')}</title>
+	${styleLinks}
+	<style>
+		body { font-family: sans-serif; padding: 20px; color: #111827; }
+		.print-shift-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #111827; }
+		button { display: none !important; }
+		input { border: 1px solid #e5e7eb !important; background: white !important; -webkit-appearance: none; }
+	</style>
+</head>
+<body>
+	<div class="print-shift-header">${__('Shift Close Report')}</div>
+	${printArea.innerHTML}
+</body>
+</html>`
 
-	const container = document.createElement('div')
-	container.id = printContainerId
-	container.innerHTML = `
-		<div class="print-shift-header">${__('Shift Close Report')}</div>
-		${printArea.innerHTML}
-	`
-	document.body.appendChild(container)
-
-	// Inject a <style> tag for @media print rules
-	const styleId = 'pos-shift-print-style'
-	let styleEl = document.getElementById(styleId)
-	if (!styleEl) {
-		styleEl = document.createElement('style')
-		styleEl.id = styleId
-		document.head.appendChild(styleEl)
+	const blob = new Blob([html], { type: 'text/html' })
+	const blobUrl = URL.createObjectURL(blob)
+	const win = window.open(blobUrl, '_blank')
+	if (win) {
+		win.addEventListener('load', () => URL.revokeObjectURL(blobUrl))
+	} else {
+		const a = document.createElement('a')
+		a.href = blobUrl
+		a.download = 'shift-close-report.html'
+		document.body.appendChild(a)
+		a.click()
+		document.body.removeChild(a)
+		setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
 	}
-	styleEl.textContent = `
-		@media print {
-			body > *:not(#${printContainerId}) { display: none !important; }
-			#${printContainerId} { display: block !important; padding: 20px; }
-			.no-print { display: none !important; }
-			button { display: none !important; }
-			input { border: 1px solid #e5e7eb !important; background: white !important; -webkit-appearance: none; }
-			.print-shift-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #111827; }
-		}
-		#${printContainerId} { display: none; }
-	`
-
-	// Trigger print and clean up afterwards
-	const cleanup = () => {
-		const el = document.getElementById(printContainerId)
-		if (el) el.remove()
-		const st = document.getElementById(styleId)
-		if (st) st.remove()
-		window.removeEventListener('afterprint', cleanup)
-	}
-	window.addEventListener('afterprint', cleanup)
-
-	setTimeout(() => {
-		window.print()
-		// Fallback cleanup in case afterprint doesn't fire (some mobile browsers)
-		setTimeout(cleanup, 2000)
-	}, 300)
 }
 
 function closeDialog() {
