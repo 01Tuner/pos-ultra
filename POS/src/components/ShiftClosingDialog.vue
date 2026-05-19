@@ -523,6 +523,7 @@ import { useFormatters } from "../composables/useFormatters"
 import { usePOSSettingsStore } from "../stores/posSettings"
 import TranslatedHTML from "./common/TranslatedHTML.vue"
 import { isAndroid } from "@/utils/device"
+import { openAndroidPrintBlob } from "@/utils/printInvoice"
 
 const props = defineProps({
 	modelValue: {
@@ -689,20 +690,10 @@ function printShift() {
 <body>
 	<div class="print-shift-header">${__('Shift Close Report')}</div>
 	${printArea.innerHTML}
-	<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>
 </body>
 </html>`
 
-		const blob = new Blob([html], { type: 'text/html' })
-		const blobUrl = URL.createObjectURL(blob)
-		const a = document.createElement('a')
-		a.href = blobUrl
-		a.target = '_blank'
-		a.rel = 'noopener'
-		document.body.appendChild(a)
-		a.click()
-		document.body.removeChild(a)
-		setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+		openAndroidPrintBlob(html)
 	} else {
 		// Desktop: inject a temporary print container and use window.print()
 		const printContainerId = 'pos-shift-print-root'

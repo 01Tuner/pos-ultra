@@ -5,6 +5,9 @@ import { isAndroid } from "@/utils/device"
 
 const log = logger.create('PrintInvoice')
 
+/** Delay before window.print() on Android — page must finish painting first. */
+const ANDROID_PRINT_DELAY_MS = 10
+
 /**
  * Opens a URL in a new tab via an anchor click.
  * Unlike window.open(), anchor clicks are not treated as popups by Android Chrome,
@@ -18,6 +21,64 @@ function openViaAnchor(url) {
 	document.body.appendChild(a)
 	a.click()
 	document.body.removeChild(a)
+}
+
+/**
+ * Prepares HTML for Android printing: hide action banner, strip Frappe's
+ * trigger_print script (which calls window.close() and dismisses the dialog),
+ * and inject a delayed window.print() with no auto-close.
+ */
+function prepareAndroidPrintHtml(html) {
+	// Remove Frappe's trigger_print script (window.print + window.close)
+	html = html.replace(
+		/<script>[\s\S]*?window\.print\(\);[\s\S]*?window\.close\(\);[\s\S]*?<\/script>/gi,
+		'',
+	)
+
+	if (!html.includes('<base href')) {
+		html = html.replace('<head>', `<head><base href="${window.location.origin}">`)
+	}
+
+	html = html.replace(
+		'</head>',
+		`<style>
+.action-banner{display:none!important}
+.print-format-gutter{padding:0!important;margin:0!important}
+</style></head>`,
+	)
+
+	const autoPrintScript = `<script>
+(function() {
+	function doPrint() {
+		setTimeout(function() { window.print(); }, ${ANDROID_PRINT_DELAY_MS});
+	}
+	if (document.readyState === 'complete') doPrint();
+	else window.addEventListener('load', doPrint);
+})();
+</script>`
+
+	html = html.replace('</body>', `${autoPrintScript}</body>`)
+	return html
+}
+
+/**
+ * Opens an HTML document in a new tab on Android and auto-triggers print
+ * after a delay, without closing the tab (avoids dismissing the print dialog).
+ */
+export function openAndroidPrintBlob(html) {
+	const prepared = prepareAndroidPrintHtml(html)
+	const blob = new Blob([prepared], { type: 'text/html' })
+	const blobUrl = URL.createObjectURL(blob)
+	openViaAnchor(blobUrl)
+	setTimeout(() => URL.revokeObjectURL(blobUrl), 120000)
+}
+
+/**
+ * Fetches Frappe printview HTML (trigger_print=0) and opens for Android print.
+ */
+async function openFrappePrintOnAndroid(urlParams) {
+	const html = await fetchFrappeHtml(urlParams)
+	openAndroidPrintBlob(html)
 }
 
 /**
@@ -256,14 +317,12 @@ export async function printInvoice(
 			params.append("letterhead", letterhead)
 		}
 
-		params.append("trigger_print", 1)
-		const printUrl = `/printview?${params.toString()}`
-
 		if (isAndroid()) {
-			// Anchor click bypasses Android's popup blocker; the printview page
-			// calls window.print() on itself via trigger_print=1
-			openViaAnchor(printUrl)
+			// trigger_print=1 injects window.close() after print — dismisses Android print dialog
+			await openFrappePrintOnAndroid(params.toString())
 		} else {
+			params.append("trigger_print", 1)
+			const printUrl = `/printview?${params.toString()}`
 			const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
 			if (!printWindow) throw new Error("Failed to open print window. Please check your popup blocker settings.")
 			printWindow.addEventListener('afterprint', () => printWindow.close())
@@ -662,16 +721,7 @@ export async function printInvoiceCustom(invoiceData) {
 `
 
 	if (isAndroid()) {
-		// Inject auto-print script into the HTML then open via anchor click.
-		// The page calls window.print() on itself — not blocked by Android Chrome.
-		const htmlWithPrint = printContent.replace(
-			'</body>',
-			'<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body>'
-		)
-		const blob = new Blob([htmlWithPrint], { type: 'text/html' })
-		const blobUrl = URL.createObjectURL(blob)
-		openViaAnchor(blobUrl)
-		setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+		openAndroidPrintBlob(printContent)
 	} else {
 		// Desktop: open a popup and auto-trigger window.print()
 		const printWindow = window.open("", "_blank", "width=350,height=600")
@@ -764,12 +814,12 @@ export async function printPaymentReceipt(paymentData) {
 				format: "Standard",
 				no_letterhead: 1,
 				_lang: "en",
-				trigger_print: 1,
 			})
-			const printUrl = `/printview?${params.toString()}`
 			if (isAndroid()) {
-				openViaAnchor(printUrl)
+				await openFrappePrintOnAndroid(params.toString())
 			} else {
+				params.append("trigger_print", 1)
+				const printUrl = `/printview?${params.toString()}`
 				const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
 				if (!printWindow) throw new Error("Popup blocked")
 				printWindow.addEventListener('afterprint', () => printWindow.close())
@@ -800,13 +850,13 @@ export async function printSalesOrderByName(orderName) {
 			doctype: "Sales Order",
 			name: orderName,
 			no_letterhead: 0,
-			trigger_print: 1,
 			_t: Date.now(),
 		})
-		const printUrl = `/printview?${params.toString()}`
 		if (isAndroid()) {
-			openViaAnchor(printUrl)
+			await openFrappePrintOnAndroid(params.toString())
 		} else {
+			params.append("trigger_print", 1)
+			const printUrl = `/printview?${params.toString()}`
 			const printWindow = window.open(printUrl, 'pos_print_so', 'width=900,height=700,toolbar=0,scrollbars=1,status=0,resizable=1')
 			if (!printWindow) throw new Error("Failed to open print window. Please check your popup blocker settings.")
 			printWindow.addEventListener('afterprint', () => printWindow.close())
@@ -833,13 +883,13 @@ export async function printDeliveryNoteByName(dnName) {
 			doctype: "Delivery Note",
 			name: dnName,
 			no_letterhead: 0,
-			trigger_print: 1,
 			_t: Date.now(),
 		})
-		const printUrl = `/printview?${params.toString()}`
 		if (isAndroid()) {
-			openViaAnchor(printUrl)
+			await openFrappePrintOnAndroid(params.toString())
 		} else {
+			params.append("trigger_print", 1)
+			const printUrl = `/printview?${params.toString()}`
 			const printWindow = window.open(printUrl, 'pos_print_dn', 'width=900,height=700,toolbar=0,scrollbars=1,status=0,resizable=1')
 			if (!printWindow) throw new Error("Failed to open print window. Please check your popup blocker settings.")
 			printWindow.addEventListener('afterprint', () => printWindow.close())
@@ -881,13 +931,13 @@ export async function printPaymentEntryByInvoiceName(invoiceName) {
 				doctype: "Payment Entry",
 				name: paymentEntryName,
 				no_letterhead: 0,
-				trigger_print: 1,
 				_t: Date.now(),
 			})
-			const printUrl = `/printview?${params.toString()}`
 			if (isAndroid()) {
-				openViaAnchor(printUrl)
+				await openFrappePrintOnAndroid(params.toString())
 			} else {
+				params.append("trigger_print", 1)
+				const printUrl = `/printview?${params.toString()}`
 				const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
 				if (!printWindow) throw new Error("Popup blocked")
 				printWindow.addEventListener('afterprint', () => printWindow.close())
