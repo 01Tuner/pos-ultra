@@ -523,6 +523,7 @@ import { useFormatters } from "../composables/useFormatters"
 import { usePOSSettingsStore } from "../stores/posSettings"
 import TranslatedHTML from "./common/TranslatedHTML.vue"
 import { openAsPdf } from "@/utils/printInvoice"
+import { isAndroid } from "@/utils/device"
 
 const props = defineProps({
 	modelValue: {
@@ -664,7 +665,7 @@ async function printShift() {
 	const printArea = document.getElementById('shift-closing-print-area')
 	if (!printArea) return
 
-	const mobile = true
+	const mobile = isAndroid()
 
 	if (mobile) {
 		// Mobile (iOS/Android): generate PDF client-side — window.print() is unreliable

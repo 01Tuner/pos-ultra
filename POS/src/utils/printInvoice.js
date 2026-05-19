@@ -1,14 +1,9 @@
 import { usePOSSettingsStore } from "@/stores/posSettings"
 import { call } from "@/utils/apiWrapper"
 import { logger } from "@/utils/logger"
+import { isAndroid } from "@/utils/device"
 
 const log = logger.create('PrintInvoice')
-
-/** Returns true when running on a mobile device (iOS or Android). */
-function isMobile() {
-	return true
-	return /android|iphone|ipad|ipod/i.test(navigator.userAgent)
-}
 
 /**
  * Opens an HTML string as a Blob URL in a new tab.
@@ -117,13 +112,20 @@ export async function openAsPdf(htmlString, filename = 'document.pdf', iframeWid
 		iframe.style.cssText = `position:fixed;top:-9999px;left:-9999px;width:${iframeWidth}px;height:1123px;border:none;visibility:hidden;`
 		document.body.appendChild(iframe)
 
+		// Inject style to hide UI-only elements before rendering
+		const printHtml = htmlString.replace('</head>', `<style>.action-banner{display:none!important}</style></head>`)
+
 		await new Promise((resolve, reject) => {
 			iframe.onload = resolve
 			iframe.onerror = reject
 			iframe.contentDocument.open()
-			iframe.contentDocument.write(htmlString)
+			iframe.contentDocument.write(printHtml)
 			iframe.contentDocument.close()
 		})
+
+		// Strip print-format-gutter class so its padding/margin doesn't affect the PDF
+		iframe.contentDocument.querySelectorAll('.print-format-gutter')
+			.forEach(el => el.classList.remove('print-format-gutter'))
 
 		// Allow fonts/images to settle
 		await new Promise(r => setTimeout(r, 500))
@@ -203,7 +205,7 @@ export async function printInvoice(
 			params.append("letterhead", letterhead)
 		}
 
-		if (isMobile()) {
+		if (isAndroid()) {
 			// Mobile (iOS/Android): generate PDF client-side — window.print() is unreliable
 			const html = await fetchFrappeHtml(params.toString())
 			await openAsPdf(html, `${invoiceData.name}.pdf`)
@@ -608,7 +610,7 @@ export async function printInvoiceCustom(invoiceData) {
 	</html>
 `
 
-	if (isMobile()) {
+	if (isAndroid()) {
 		// Mobile (iOS/Android): generate PDF client-side using 80mm thermal format
 		await openAsPdf(printContent, `${invoiceData.name}.pdf`, 302)
 	} else {
@@ -704,7 +706,7 @@ export async function printPaymentReceipt(paymentData) {
 				no_letterhead: 1,
 				_lang: "en",
 			})
-			if (isMobile()) {
+			if (isAndroid()) {
 				const html = await fetchFrappeHtml(params.toString())
 				await openAsPdf(html, `${paymentData.voucher_no}.pdf`)
 			} else {
@@ -743,7 +745,7 @@ export async function printSalesOrderByName(orderName) {
 			_t: Date.now(),
 		})
 
-		if (isMobile()) {
+		if (isAndroid()) {
 			const html = await fetchFrappeHtml(params.toString())
 			await openAsPdf(html, `${orderName}.pdf`)
 		} else {
@@ -778,7 +780,7 @@ export async function printDeliveryNoteByName(dnName) {
 			_t: Date.now(),
 		})
 
-		if (isMobile()) {
+		if (isAndroid()) {
 			const html = await fetchFrappeHtml(params.toString())
 			await openAsPdf(html, `${dnName}.pdf`)
 		} else {
@@ -827,7 +829,7 @@ export async function printPaymentEntryByInvoiceName(invoiceName) {
 				no_letterhead: 0,
 				_t: Date.now(),
 			})
-			if (isMobile()) {
+			if (isAndroid()) {
 				const html = await fetchFrappeHtml(params.toString())
 				await openAsPdf(html, `${paymentEntryName}.pdf`)
 			} else {
