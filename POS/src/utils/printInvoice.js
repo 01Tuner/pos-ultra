@@ -142,30 +142,53 @@ export async function openAsPdf(htmlString, filename = 'document.pdf', iframeWid
 		document.body.removeChild(iframe)
 
 		const imgData = canvas.toDataURL('image/png')
-		const pdf = new jsPDF({
-			orientation: 'portrait',
-			unit: 'px',
-			format: [canvas.width, canvas.height],
-		})
-		pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
-
-		// Explicitly set application/pdf MIME type so Android Chrome opens in PDF viewer
-		const blob = new Blob([pdf.output('arraybuffer')], { type: 'application/pdf' })
-		const blobUrl = URL.createObjectURL(blob)
 
 		if (isAndroid()) {
-			// On Android, window.open() is blocked in async context (not a direct user gesture).
-			// Using <a> without a `download` attribute lets Chrome handle the MIME type and
-			// open the PDF in the built-in viewer instead of forcing a file save.
+			// On Android, open the canvas as an HTML page that auto-triggers window.print()
+			// on its own onload. A page calling print() on itself works reliably on Android
+			// Chrome and invokes the native print dialog (including Bluetooth printers).
+			// This avoids the PDF blob MIME/viewer issues and the popup-blocking problem.
+			const autoHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#fff; }
+img { width:100%; display:block; }
+@media print { img { width:100%; } }
+</style>
+</head>
+<body>
+<img src="${imgData}">
+<script>
+window.onload = function() {
+	setTimeout(function() { window.print(); }, 600);
+};
+</script>
+</body>
+</html>`
+			const htmlBlob = new Blob([autoHtml], { type: 'text/html' })
+			const htmlUrl = URL.createObjectURL(htmlBlob)
 			const a = document.createElement('a')
-			a.href = blobUrl
+			a.href = htmlUrl
 			a.target = '_blank'
 			a.rel = 'noopener'
 			document.body.appendChild(a)
 			a.click()
 			document.body.removeChild(a)
-			setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
+			setTimeout(() => URL.revokeObjectURL(htmlUrl), 60000)
 		} else {
+			const pdf = new jsPDF({
+				orientation: 'portrait',
+				unit: 'px',
+				format: [canvas.width, canvas.height],
+			})
+			pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
+
+			const blob = new Blob([pdf.output('arraybuffer')], { type: 'application/pdf' })
+			const blobUrl = URL.createObjectURL(blob)
 			const win = window.open(blobUrl, '_blank')
 			if (win) {
 				win.addEventListener('load', () => setTimeout(() => URL.revokeObjectURL(blobUrl), 30000))
