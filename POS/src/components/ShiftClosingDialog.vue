@@ -27,28 +27,28 @@
               <!-- Gross Sales (before returns) -->
               <div class="text-start bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
                 <div class="text-blue-600 text-xs uppercase font-medium mb-1">{{ __('Gross Sales') }}</div>
-                <div class="text-lg md:text-2xl font-bold text-blue-900 mb-0.5 md:mb-1 truncate">{{ formatCurrency(grossSales) }}</div>
+                <div class="text-lg md:text-2xl font-bold text-blue-900 mb-0.5 md:mb-1 break-all">{{ formatCurrency(grossSales) }}</div>
                 <div class="text-blue-600 text-xs">{{ __('{0} invoices', [closingData.sales_count || salesInvoiceCount]) }}</div>
               </div>
 
               <!-- Returns -->
               <div v-if="hasReturns" class="text-start bg-red-50 border border-red-200 rounded-lg p-3 md:p-4">
                 <div class="text-red-600 text-xs uppercase font-medium mb-1">{{ __('Returns') }}</div>
-                <div class="text-lg md:text-2xl font-bold text-red-700 mb-0.5 md:mb-1 truncate">-{{ formatCurrency(closingData.returns_total) }}</div>
+                <div class="text-lg md:text-2xl font-bold text-red-700 mb-0.5 md:mb-1 break-all">-{{ formatCurrency(closingData.returns_total) }}</div>
                 <div class="text-red-600 text-xs">{{ __('{0} returns', [closingData.returns_count]) }}</div>
               </div>
 
               <!-- Net Sales (after returns) -->
               <div class="text-start bg-green-50 border border-green-200 rounded-lg p-3 md:p-4">
                 <div class="text-green-600 text-xs uppercase font-medium mb-1">{{ __('Net Sales') }}</div>
-                <div class="text-lg md:text-2xl font-bold text-green-900 mb-0.5 md:mb-1 truncate">{{ formatCurrency(closingData.grand_total) }}</div>
+                <div class="text-lg md:text-2xl font-bold text-green-900 mb-0.5 md:mb-1 break-all">{{ formatCurrency(closingData.grand_total) }}</div>
                 <div class="text-green-600 text-xs">{{ __('After returns') }}</div>
               </div>
 
               <!-- Tax Collected -->
               <div class="text-start bg-gray-50 border border-gray-200 rounded-lg p-3 md:p-4">
                 <div class="text-gray-600 text-xs uppercase font-medium mb-1">{{ __('Tax Collected') }}</div>
-                <div class="text-lg md:text-2xl font-bold text-gray-900 mb-0.5 md:mb-1 truncate">{{ formatCurrency(totalTax) }}</div>
+                <div class="text-lg md:text-2xl font-bold text-gray-900 mb-0.5 md:mb-1 break-all">{{ formatCurrency(totalTax) }}</div>
                 <div class="text-gray-600 text-xs">{{ __('Net tax') }}</div>
               </div>
             </div>
@@ -522,6 +522,7 @@ import { useShift } from "../composables/useShift"
 import { useFormatters } from "../composables/useFormatters"
 import { usePOSSettingsStore } from "../stores/posSettings"
 import TranslatedHTML from "./common/TranslatedHTML.vue"
+import { openAsPdf } from "@/utils/printInvoice"
 
 const props = defineProps({
 	modelValue: {
@@ -659,25 +660,28 @@ async function submitClosing() {
 	}
 }
 
-function printShift() {
+async function printShift() {
 	const printArea = document.getElementById('shift-closing-print-area')
 	if (!printArea) return
 
-	// Collect stylesheet links from the current page to include in the blob document
-	const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-		.map(el => `<link rel="stylesheet" href="${el.href}">`)
-		.join('\n')
+	const mobile = true
 
-	const html = `<!DOCTYPE html>
+	if (mobile) {
+		// Mobile (iOS/Android): generate PDF client-side — window.print() is unreliable
+		const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+			.map(el => `<link rel="stylesheet" href="${el.href}">`)
+			.join('\n')
+
+		const html = `<!DOCTYPE html>
 <html>
 <head>
 	<meta charset="UTF-8">
 	<title>${__('Shift Close Report')}</title>
+	<base href="${window.location.origin}">
 	${styleLinks}
 	<style>
 		body { font-family: sans-serif; padding: 20px; color: #111827; }
 		.print-shift-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #111827; }
-		button { display: none !important; }
 		input { border: 1px solid #e5e7eb !important; background: white !important; -webkit-appearance: none; }
 	</style>
 </head>
@@ -687,19 +691,54 @@ function printShift() {
 </body>
 </html>`
 
-	const blob = new Blob([html], { type: 'text/html' })
-	const blobUrl = URL.createObjectURL(blob)
-	const win = window.open(blobUrl, '_blank')
-	if (win) {
-		win.addEventListener('load', () => URL.revokeObjectURL(blobUrl))
+		await openAsPdf(html, 'shift-close-report.pdf')
 	} else {
-		const a = document.createElement('a')
-		a.href = blobUrl
-		a.download = 'shift-close-report.html'
-		document.body.appendChild(a)
-		a.click()
-		document.body.removeChild(a)
-		setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+		// Desktop: inject a temporary print container and use window.print()
+		const printContainerId = 'pos-shift-print-root'
+		let existing = document.getElementById(printContainerId)
+		if (existing) existing.remove()
+
+		const container = document.createElement('div')
+		container.id = printContainerId
+		container.innerHTML = `
+			<div class="print-shift-header">${__('Shift Close Report')}</div>
+			${printArea.innerHTML}
+		`
+		document.body.appendChild(container)
+
+		const styleId = 'pos-shift-print-style'
+		let styleEl = document.getElementById(styleId)
+		if (!styleEl) {
+			styleEl = document.createElement('style')
+			styleEl.id = styleId
+			document.head.appendChild(styleEl)
+		}
+		styleEl.textContent = `
+			@media print {
+				body > *:not(#${printContainerId}) { display: none !important; }
+				#${printContainerId} { display: block !important; padding: 20px; }
+				.no-print { display: none !important; }
+				button { display: none !important; }
+				input { border: 1px solid #e5e7eb !important; background: white !important; -webkit-appearance: none; }
+				.print-shift-header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #111827; }
+			}
+			#${printContainerId} { display: none; }
+		`
+
+		const cleanup = () => {
+			const el = document.getElementById(printContainerId)
+			if (el) el.remove()
+			const st = document.getElementById(styleId)
+			if (st) st.remove()
+			window.removeEventListener('afterprint', cleanup)
+		}
+		window.addEventListener('afterprint', cleanup)
+
+		setTimeout(() => {
+			window.print()
+			// Fallback cleanup in case afterprint doesn't fire
+			setTimeout(cleanup, 2000)
+		}, 300)
 	}
 }
 

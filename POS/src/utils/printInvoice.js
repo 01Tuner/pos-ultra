@@ -4,10 +4,15 @@ import { logger } from "@/utils/logger"
 
 const log = logger.create('PrintInvoice')
 
+/** Returns true when running on a mobile device (iOS or Android). */
+function isMobile() {
+	return true
+	return /android|iphone|ipad|ipod/i.test(navigator.userAgent)
+}
+
 /**
  * Opens an HTML string as a Blob URL in a new tab.
- * Avoids window.print() which is unsupported on Android WebView/Chrome.
- * The user can print from the browser's native share/print menu.
+ * Used on mobile (iOS/Android) where window.print() is unreliable.
  */
 function openHtmlBlob(html) {
 	const blob = new Blob([html], { type: 'text/html' })
@@ -29,28 +34,137 @@ function openHtmlBlob(html) {
 
 /**
  * Fetches Frappe's PDF download endpoint and opens the result as a Blob URL.
- * Works on Android because it opens a native PDF viewer tab instead of
- * relying on window.print().
+ * Falls back to fetching the /printview HTML and opening as an HTML blob when
+ * the PDF generation fails (e.g. wkhtmltopdf broken image links error).
+ * Used on mobile (iOS/Android) where window.print() is unreliable.
  */
 async function openFrappePdfBlob(urlParams) {
-	const pdfUrl = `/api/method/frappe.utils.print_format.download_pdf?${urlParams}`
-	const response = await fetch(pdfUrl, { credentials: 'same-origin' })
-	if (!response.ok) throw new Error(`PDF fetch failed: ${response.status}`)
-	const blob = await response.blob()
-	const blobUrl = URL.createObjectURL(blob)
-	const win = window.open(blobUrl, '_blank')
-	if (win) {
-		// Revoke after a generous delay so the PDF has time to load
-		win.addEventListener('load', () => setTimeout(() => URL.revokeObjectURL(blobUrl), 30000))
-	} else {
-		// Popup blocked — trigger download instead
-		const a = document.createElement('a')
-		a.href = blobUrl
-		a.download = 'document.pdf'
-		document.body.appendChild(a)
-		a.click()
-		document.body.removeChild(a)
-		setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+	try {
+		const pdfUrl = `/api/method/frappe.utils.print_format.download_pdf?${urlParams}`
+		const response = await fetch(pdfUrl, { credentials: 'same-origin' })
+		if (!response.ok) throw new Error(`PDF fetch failed: ${response.status}`)
+
+		const blob = await response.blob()
+		const blobUrl = URL.createObjectURL(blob)
+		const win = window.open(blobUrl, '_blank')
+		if (win) {
+			win.addEventListener('load', () => setTimeout(() => URL.revokeObjectURL(blobUrl), 30000))
+		} else {
+			// Popup blocked — trigger download instead
+			const a = document.createElement('a')
+			a.href = blobUrl
+			a.download = 'document.pdf'
+			document.body.appendChild(a)
+			a.click()
+			document.body.removeChild(a)
+			setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+		}
+	} catch (err) {
+		// PDF generation failed (e.g. broken image links in wkhtmltopdf).
+		// Fall back to fetching the printview HTML and opening as an HTML blob.
+		log.warn('PDF blob failed, falling back to printview HTML:', err)
+		await openFrappeHtmlBlob(urlParams)
+	}
+}
+
+/**
+ * Fetches Frappe's /printview HTML and opens it as an HTML blob with a print button.
+ * Used as fallback when server-side PDF generation fails.
+ */
+async function openFrappeHtmlBlob(urlParams) {
+	const htmlUrl = `/printview?${urlParams}`
+	const response = await fetch(htmlUrl, { credentials: 'same-origin' })
+	if (!response.ok) throw new Error(`Printview fetch failed: ${response.status}`)
+	let html = await response.text()
+
+	// Fix relative URLs so stylesheets/images resolve correctly from a blob origin
+	html = html.replace('<head>', `<head><base href="${window.location.origin}">`)
+
+	openHtmlBlob(html)
+}
+
+/**
+ * Fetches Frappe's /printview HTML and returns the HTML string.
+ * Adds a <base href> tag so relative URLs resolve correctly.
+ * Used as a building block for client-side PDF generation on mobile.
+ */
+async function fetchFrappeHtml(urlParams) {
+	const htmlUrl = `/printview?${urlParams}`
+	const response = await fetch(htmlUrl, { credentials: 'same-origin' })
+	if (!response.ok) throw new Error(`Printview fetch failed: ${response.status}`)
+	let html = await response.text()
+	html = html.replace('<head>', `<head><base href="${window.location.origin}">`)
+	return html
+}
+
+/**
+ * Renders an HTML string to a PDF using jsPDF + html2canvas and opens it in a new tab.
+ * The HTML is loaded into a hidden off-screen iframe so the full document (styles,
+ * fonts, images) renders correctly before the canvas screenshot is taken.
+ * Falls back to openHtmlBlob if rendering fails.
+ *
+ * @param {string} htmlString - Full HTML document string to render
+ * @param {string} filename   - PDF filename for the download fallback (default: 'document.pdf')
+ * @param {number} iframeWidth - Iframe render width in px: 794 for A4, 302 for 80mm thermal
+ */
+export async function openAsPdf(htmlString, filename = 'document.pdf', iframeWidth = 794) {
+	try {
+		const { jsPDF } = await import('jspdf')
+		const html2canvas = (await import('html2canvas')).default
+
+		// Render the full HTML document in a hidden off-screen iframe
+		const iframe = document.createElement('iframe')
+		iframe.style.cssText = `position:fixed;top:-9999px;left:-9999px;width:${iframeWidth}px;height:1123px;border:none;visibility:hidden;`
+		document.body.appendChild(iframe)
+
+		await new Promise((resolve, reject) => {
+			iframe.onload = resolve
+			iframe.onerror = reject
+			iframe.contentDocument.open()
+			iframe.contentDocument.write(htmlString)
+			iframe.contentDocument.close()
+		})
+
+		// Allow fonts/images to settle
+		await new Promise(r => setTimeout(r, 500))
+
+		const element = iframe.contentDocument.body
+		const canvas = await html2canvas(element, {
+			scale: 2,
+			useCORS: true,
+			allowTaint: true,
+			logging: false,
+			windowWidth: iframeWidth,
+		})
+
+		document.body.removeChild(iframe)
+
+		const imgData = canvas.toDataURL('image/png')
+		const pdf = new jsPDF({
+			orientation: 'portrait',
+			unit: 'px',
+			format: [canvas.width, canvas.height],
+		})
+		pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
+
+		const blob = pdf.output('blob')
+		const blobUrl = URL.createObjectURL(blob)
+		const win = window.open(blobUrl, '_blank')
+		if (win) {
+			win.addEventListener('load', () => setTimeout(() => URL.revokeObjectURL(blobUrl), 30000))
+		} else {
+			// Popup blocked — download instead
+			const a = document.createElement('a')
+			a.href = blobUrl
+			a.download = filename
+			document.body.appendChild(a)
+			a.click()
+			document.body.removeChild(a)
+			setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+		}
+	} catch (err) {
+		log.warn('jsPDF/html2canvas failed, falling back to HTML blob:', err)
+		openHtmlBlob(htmlString)
 	}
 }
 
@@ -78,6 +192,7 @@ export async function printInvoice(
 			name: invoiceData.name,
 			no_letterhead: letterhead ? 0 : 1,
 			_lang: "en",
+			_t: Date.now(),
 		})
 
 		if (printFormat) {
@@ -88,7 +203,18 @@ export async function printInvoice(
 			params.append("letterhead", letterhead)
 		}
 
-		await openFrappePdfBlob(params.toString())
+		if (isMobile()) {
+			// Mobile (iOS/Android): generate PDF client-side — window.print() is unreliable
+			const html = await fetchFrappeHtml(params.toString())
+			await openAsPdf(html, `${invoiceData.name}.pdf`)
+		} else {
+			// Desktop: use Frappe's printview with trigger_print
+			params.append("trigger_print", 1)
+			const printUrl = `/printview?${params.toString()}`
+			const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
+			if (!printWindow) throw new Error("Failed to open print window. Please check your popup blocker settings.")
+			printWindow.addEventListener('afterprint', () => printWindow.close())
+		}
 
 		return true
 	} catch (error) {
@@ -119,7 +245,7 @@ export async function printInvoice(
 * @param {Array} invoiceData.payments - Payment records
 * @param {number} invoiceData.grand_total - Invoice total amount
 */
-export function printInvoiceCustom(invoiceData) {
+export async function printInvoiceCustom(invoiceData) {
 	const printContent = `
 <!DOCTYPE html>
 <html>
@@ -482,7 +608,19 @@ export function printInvoiceCustom(invoiceData) {
 	</html>
 `
 
-	openHtmlBlob(printContent)
+	if (isMobile()) {
+		// Mobile (iOS/Android): generate PDF client-side using 80mm thermal format
+		await openAsPdf(printContent, `${invoiceData.name}.pdf`, 302)
+	} else {
+		// Desktop: open a popup and auto-trigger window.print()
+		const printWindow = window.open("", "_blank", "width=350,height=600")
+		printWindow.document.write(printContent)
+		printWindow.document.close()
+		printWindow.onload = () => {
+			setTimeout(() => printWindow.print(), 250)
+		}
+		printWindow.addEventListener('afterprint', () => printWindow.close())
+	}
 }
 
 function formatCurrency(amount) {
@@ -566,7 +704,16 @@ export async function printPaymentReceipt(paymentData) {
 				no_letterhead: 1,
 				_lang: "en",
 			})
-			await openFrappePdfBlob(params.toString())
+			if (isMobile()) {
+				const html = await fetchFrappeHtml(params.toString())
+				await openAsPdf(html, `${paymentData.voucher_no}.pdf`)
+			} else {
+				params.append("trigger_print", 1)
+				const printUrl = `/printview?${params.toString()}`
+				const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
+				if (!printWindow) throw new Error("Popup blocked")
+				printWindow.addEventListener('afterprint', () => printWindow.close())
+			}
 		} else if (paymentData.voucher_type === "Sales Invoice") {
 			await printInvoiceByName(paymentData.voucher_no)
 		} else {
@@ -593,9 +740,19 @@ export async function printSalesOrderByName(orderName) {
 			doctype: "Sales Order",
 			name: orderName,
 			no_letterhead: 0,
+			_t: Date.now(),
 		})
 
-		await openFrappePdfBlob(params.toString())
+		if (isMobile()) {
+			const html = await fetchFrappeHtml(params.toString())
+			await openAsPdf(html, `${orderName}.pdf`)
+		} else {
+			params.append("trigger_print", 1)
+			const printUrl = `/printview?${params.toString()}`
+			const printWindow = window.open(printUrl, 'pos_print_so', 'width=900,height=700,toolbar=0,scrollbars=1,status=0,resizable=1')
+			if (!printWindow) throw new Error("Failed to open print window. Please check your popup blocker settings.")
+			printWindow.addEventListener('afterprint', () => printWindow.close())
+		}
 
 		return true
 	} catch (error) {
@@ -618,9 +775,19 @@ export async function printDeliveryNoteByName(dnName) {
 			doctype: "Delivery Note",
 			name: dnName,
 			no_letterhead: 0,
+			_t: Date.now(),
 		})
 
-		await openFrappePdfBlob(params.toString())
+		if (isMobile()) {
+			const html = await fetchFrappeHtml(params.toString())
+			await openAsPdf(html, `${dnName}.pdf`)
+		} else {
+			params.append("trigger_print", 1)
+			const printUrl = `/printview?${params.toString()}`
+			const printWindow = window.open(printUrl, 'pos_print_dn', 'width=900,height=700,toolbar=0,scrollbars=1,status=0,resizable=1')
+			if (!printWindow) throw new Error("Failed to open print window. Please check your popup blocker settings.")
+			printWindow.addEventListener('afterprint', () => printWindow.close())
+		}
 
 		return true
 	} catch (error) {
@@ -658,8 +825,18 @@ export async function printPaymentEntryByInvoiceName(invoiceName) {
 				doctype: "Payment Entry",
 				name: paymentEntryName,
 				no_letterhead: 0,
+				_t: Date.now(),
 			})
-			await openFrappePdfBlob(params.toString())
+			if (isMobile()) {
+				const html = await fetchFrappeHtml(params.toString())
+				await openAsPdf(html, `${paymentEntryName}.pdf`)
+			} else {
+				params.append("trigger_print", 1)
+				const printUrl = `/printview?${params.toString()}`
+				const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
+				if (!printWindow) throw new Error("Popup blocked")
+				printWindow.addEventListener('afterprint', () => printWindow.close())
+			}
 			return true
 		}
 
