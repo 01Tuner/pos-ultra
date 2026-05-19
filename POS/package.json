@@ -22,8 +22,6 @@
 		"dexie": "^4.2.0",
 		"feather-icons": "^4.29.2",
 		"frappe-ui": "^0.1.240",
-		"html2canvas": "^1.4.1",
-		"jspdf": "^4.2.1",
 		"pinia": "^3.0.3",
 		"socket.io-client": "^4.7.2",
 		"vue": "3.5.13",
