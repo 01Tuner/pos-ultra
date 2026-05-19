@@ -6,6 +6,21 @@ import { isAndroid } from "@/utils/device"
 const log = logger.create('PrintInvoice')
 
 /**
+ * Opens a URL in a new tab via an anchor click.
+ * Unlike window.open(), anchor clicks are not treated as popups by Android Chrome,
+ * so they work even when called from an async context.
+ */
+function openViaAnchor(url) {
+	const a = document.createElement('a')
+	a.href = url
+	a.target = '_blank'
+	a.rel = 'noopener'
+	document.body.appendChild(a)
+	a.click()
+	document.body.removeChild(a)
+}
+
+/**
  * Opens an HTML string as a Blob URL in a new tab.
  * Used on mobile (iOS/Android) where window.print() is unreliable.
  */
@@ -144,32 +159,29 @@ export async function openAsPdf(htmlString, filename = 'document.pdf', iframeWid
 		const imgData = canvas.toDataURL('image/png')
 
 		if (isAndroid()) {
-			// On Android, open the canvas as an HTML page that auto-triggers window.print()
-			// on its own onload. A page calling print() on itself works reliably on Android
-			// Chrome and invokes the native print dialog (including Bluetooth printers).
-			// This avoids the PDF blob MIME/viewer issues and the popup-blocking problem.
-			const autoHtml = `<!DOCTYPE html>
+			// Android: wrap the canvas image in an HTML page that auto-triggers window.print()
+			// on its own onload. A page calling print() on itself is never blocked by Android
+			// Chrome and directly invokes the native print dialog (Bluetooth printers included).
+			const autoPrintHtml = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#fff; }
-img { width:100%; display:block; }
-@media print { img { width:100%; } }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#fff}
+img{width:100%;display:block}
+@media print{img{width:100%}}
 </style>
 </head>
 <body>
 <img src="${imgData}">
 <script>
-window.onload = function() {
-	setTimeout(function() { window.print(); }, 600);
-};
+window.onload=function(){setTimeout(function(){window.print()},600)};
 </script>
 </body>
 </html>`
-			const htmlBlob = new Blob([autoHtml], { type: 'text/html' })
+			const htmlBlob = new Blob([autoPrintHtml], { type: 'text/html' })
 			const htmlUrl = URL.createObjectURL(htmlBlob)
 			const a = document.createElement('a')
 			a.href = htmlUrl
@@ -180,13 +192,13 @@ window.onload = function() {
 			document.body.removeChild(a)
 			setTimeout(() => URL.revokeObjectURL(htmlUrl), 60000)
 		} else {
+			// Desktop: generate a proper PDF and open in a new tab
 			const pdf = new jsPDF({
 				orientation: 'portrait',
 				unit: 'px',
 				format: [canvas.width, canvas.height],
 			})
 			pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
-
 			const blob = new Blob([pdf.output('arraybuffer')], { type: 'application/pdf' })
 			const blobUrl = URL.createObjectURL(blob)
 			const win = window.open(blobUrl, '_blank')
@@ -244,14 +256,14 @@ export async function printInvoice(
 			params.append("letterhead", letterhead)
 		}
 
+		params.append("trigger_print", 1)
+		const printUrl = `/printview?${params.toString()}`
+
 		if (isAndroid()) {
-			// Mobile (iOS/Android): generate PDF client-side — window.print() is unreliable
-			const html = await fetchFrappeHtml(params.toString())
-			await openAsPdf(html, `${invoiceData.name}.pdf`)
+			// Anchor click bypasses Android's popup blocker; the printview page
+			// calls window.print() on itself via trigger_print=1
+			openViaAnchor(printUrl)
 		} else {
-			// Desktop: use Frappe's printview with trigger_print
-			params.append("trigger_print", 1)
-			const printUrl = `/printview?${params.toString()}`
 			const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
 			if (!printWindow) throw new Error("Failed to open print window. Please check your popup blocker settings.")
 			printWindow.addEventListener('afterprint', () => printWindow.close())
@@ -650,8 +662,16 @@ export async function printInvoiceCustom(invoiceData) {
 `
 
 	if (isAndroid()) {
-		// Mobile (iOS/Android): generate PDF client-side using 80mm thermal format
-		await openAsPdf(printContent, `${invoiceData.name}.pdf`, 302)
+		// Inject auto-print script into the HTML then open via anchor click.
+		// The page calls window.print() on itself — not blocked by Android Chrome.
+		const htmlWithPrint = printContent.replace(
+			'</body>',
+			'<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body>'
+		)
+		const blob = new Blob([htmlWithPrint], { type: 'text/html' })
+		const blobUrl = URL.createObjectURL(blob)
+		openViaAnchor(blobUrl)
+		setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
 	} else {
 		// Desktop: open a popup and auto-trigger window.print()
 		const printWindow = window.open("", "_blank", "width=350,height=600")
@@ -744,13 +764,12 @@ export async function printPaymentReceipt(paymentData) {
 				format: "Standard",
 				no_letterhead: 1,
 				_lang: "en",
+				trigger_print: 1,
 			})
+			const printUrl = `/printview?${params.toString()}`
 			if (isAndroid()) {
-				const html = await fetchFrappeHtml(params.toString())
-				await openAsPdf(html, `${paymentData.voucher_no}.pdf`)
+				openViaAnchor(printUrl)
 			} else {
-				params.append("trigger_print", 1)
-				const printUrl = `/printview?${params.toString()}`
 				const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
 				if (!printWindow) throw new Error("Popup blocked")
 				printWindow.addEventListener('afterprint', () => printWindow.close())
@@ -781,15 +800,13 @@ export async function printSalesOrderByName(orderName) {
 			doctype: "Sales Order",
 			name: orderName,
 			no_letterhead: 0,
+			trigger_print: 1,
 			_t: Date.now(),
 		})
-
+		const printUrl = `/printview?${params.toString()}`
 		if (isAndroid()) {
-			const html = await fetchFrappeHtml(params.toString())
-			await openAsPdf(html, `${orderName}.pdf`)
+			openViaAnchor(printUrl)
 		} else {
-			params.append("trigger_print", 1)
-			const printUrl = `/printview?${params.toString()}`
 			const printWindow = window.open(printUrl, 'pos_print_so', 'width=900,height=700,toolbar=0,scrollbars=1,status=0,resizable=1')
 			if (!printWindow) throw new Error("Failed to open print window. Please check your popup blocker settings.")
 			printWindow.addEventListener('afterprint', () => printWindow.close())
@@ -816,15 +833,13 @@ export async function printDeliveryNoteByName(dnName) {
 			doctype: "Delivery Note",
 			name: dnName,
 			no_letterhead: 0,
+			trigger_print: 1,
 			_t: Date.now(),
 		})
-
+		const printUrl = `/printview?${params.toString()}`
 		if (isAndroid()) {
-			const html = await fetchFrappeHtml(params.toString())
-			await openAsPdf(html, `${dnName}.pdf`)
+			openViaAnchor(printUrl)
 		} else {
-			params.append("trigger_print", 1)
-			const printUrl = `/printview?${params.toString()}`
 			const printWindow = window.open(printUrl, 'pos_print_dn', 'width=900,height=700,toolbar=0,scrollbars=1,status=0,resizable=1')
 			if (!printWindow) throw new Error("Failed to open print window. Please check your popup blocker settings.")
 			printWindow.addEventListener('afterprint', () => printWindow.close())
@@ -866,14 +881,13 @@ export async function printPaymentEntryByInvoiceName(invoiceName) {
 				doctype: "Payment Entry",
 				name: paymentEntryName,
 				no_letterhead: 0,
+				trigger_print: 1,
 				_t: Date.now(),
 			})
+			const printUrl = `/printview?${params.toString()}`
 			if (isAndroid()) {
-				const html = await fetchFrappeHtml(params.toString())
-				await openAsPdf(html, `${paymentEntryName}.pdf`)
+				openViaAnchor(printUrl)
 			} else {
-				params.append("trigger_print", 1)
-				const printUrl = `/printview?${params.toString()}`
 				const printWindow = window.open(printUrl, "_blank", "width=800,height=600")
 				if (!printWindow) throw new Error("Popup blocked")
 				printWindow.addEventListener('afterprint', () => printWindow.close())

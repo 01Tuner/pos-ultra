@@ -522,7 +522,6 @@ import { useShift } from "../composables/useShift"
 import { useFormatters } from "../composables/useFormatters"
 import { usePOSSettingsStore } from "../stores/posSettings"
 import TranslatedHTML from "./common/TranslatedHTML.vue"
-import { openAsPdf } from "@/utils/printInvoice"
 import { isAndroid } from "@/utils/device"
 
 const props = defineProps({
@@ -661,14 +660,15 @@ async function submitClosing() {
 	}
 }
 
-async function printShift() {
+function printShift() {
 	const printArea = document.getElementById('shift-closing-print-area')
 	if (!printArea) return
 
 	const mobile = isAndroid()
 
 	if (mobile) {
-		// Mobile (iOS/Android): generate PDF client-side — window.print() is unreliable
+		// Android: open HTML blob via anchor click; the page auto-prints via window.print()
+		// on its own onload — never blocked since the page triggers its own print.
 		const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
 			.map(el => `<link rel="stylesheet" href="${el.href}">`)
 			.join('\n')
@@ -689,10 +689,20 @@ async function printShift() {
 <body>
 	<div class="print-shift-header">${__('Shift Close Report')}</div>
 	${printArea.innerHTML}
+	<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>
 </body>
 </html>`
 
-		await openAsPdf(html, 'shift-close-report.pdf')
+		const blob = new Blob([html], { type: 'text/html' })
+		const blobUrl = URL.createObjectURL(blob)
+		const a = document.createElement('a')
+		a.href = blobUrl
+		a.target = '_blank'
+		a.rel = 'noopener'
+		document.body.appendChild(a)
+		a.click()
+		document.body.removeChild(a)
+		setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
 	} else {
 		// Desktop: inject a temporary print container and use window.print()
 		const printContainerId = 'pos-shift-print-root'
