@@ -149,20 +149,36 @@ export async function openAsPdf(htmlString, filename = 'document.pdf', iframeWid
 		})
 		pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
 
-		const blob = pdf.output('blob')
+		// Explicitly set application/pdf MIME type so Android Chrome opens in PDF viewer
+		const blob = new Blob([pdf.output('arraybuffer')], { type: 'application/pdf' })
 		const blobUrl = URL.createObjectURL(blob)
-		const win = window.open(blobUrl, '_blank')
-		if (win) {
-			win.addEventListener('load', () => setTimeout(() => URL.revokeObjectURL(blobUrl), 30000))
-		} else {
-			// Popup blocked — download instead
+
+		if (isAndroid()) {
+			// On Android, window.open() is blocked in async context (not a direct user gesture).
+			// Using <a> without a `download` attribute lets Chrome handle the MIME type and
+			// open the PDF in the built-in viewer instead of forcing a file save.
 			const a = document.createElement('a')
 			a.href = blobUrl
-			a.download = filename
+			a.target = '_blank'
+			a.rel = 'noopener'
 			document.body.appendChild(a)
 			a.click()
 			document.body.removeChild(a)
-			setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+			setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
+		} else {
+			const win = window.open(blobUrl, '_blank')
+			if (win) {
+				win.addEventListener('load', () => setTimeout(() => URL.revokeObjectURL(blobUrl), 30000))
+			} else {
+				// Popup blocked — fall back to download
+				const a = document.createElement('a')
+				a.href = blobUrl
+				a.download = filename
+				document.body.appendChild(a)
+				a.click()
+				document.body.removeChild(a)
+				setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+			}
 		}
 	} catch (err) {
 		log.warn('jsPDF/html2canvas failed, falling back to HTML blob:', err)
