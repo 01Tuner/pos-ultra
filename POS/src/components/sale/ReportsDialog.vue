@@ -3,7 +3,19 @@
     <template #body-content>
       <div v-if="!selectedReport" class="p-4">
         <p class="text-sm text-gray-500 mb-4">{{ __('Select a report to view') }}</p>
-        <div class="flex flex-col gap-2">
+        
+        <!-- Loading state for reports -->
+        <div v-if="reportsResource.loading" class="flex flex-col items-center justify-center py-8">
+          <LoadingIndicator class="w-8 h-8 text-blue-600 mb-2" />
+          <p class="text-sm text-gray-500 font-medium">{{ __('Loading reports...') }}</p>
+        </div>
+        
+        <!-- Empty state -->
+        <div v-else-if="!reports.length" class="flex flex-col items-center justify-center py-8">
+          <p class="text-sm text-gray-500">{{ __('No reports configured for this POS Profile.') }}</p>
+        </div>
+
+        <div v-else class="flex flex-col gap-2">
           <button
             v-for="report in reports"
             :key="report.label"
@@ -41,7 +53,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { Dialog, Button, FeatherIcon, LoadingIndicator } from 'frappe-ui'
+import { Dialog, Button, FeatherIcon, LoadingIndicator, createResource } from 'frappe-ui'
 import { usePOSSettingsStore } from '@/stores/posSettings'
 
 const props = defineProps({
@@ -56,6 +68,18 @@ const emit = defineEmits(['update:modelValue'])
 const selectedReport = ref(null)
 const reportLoading = ref(false)
 
+const settingsStore = usePOSSettingsStore()
+
+const reportsResource = createResource({
+  url: 'pos_next.pos_next.doctype.pos_settings.pos_settings.get_pos_settings',
+  makeParams() {
+    return {
+      pos_profile: settingsStore.settings.pos_profile
+    }
+  },
+  auto: false
+})
+
 const open = computed({
   get: () => props.modelValue,
   set: (value) => {
@@ -63,9 +87,13 @@ const open = computed({
   },
 })
 
-// Reset selected report when dialog is closed
+// Reset selected report and load reports when dialog is opened/closed
 watch(() => props.modelValue, (newVal) => {
-  if (!newVal) {
+  if (newVal) {
+    if (settingsStore.settings.pos_profile) {
+      reportsResource.fetch()
+    }
+  } else {
     // Slight delay to not show the swap while closing animation is playing
     setTimeout(() => {
       selectedReport.value = null
@@ -104,8 +132,6 @@ function injectIframeStyles(event) {
   }
 }
 
-const settingsStore = usePOSSettingsStore()
-
 function buildReportUrl(reportName, passPosProfile = true) {
   const base = `/app/query-report/${encodeURIComponent(reportName)}`
   const posProfile = settingsStore.settings.pos_profile
@@ -116,33 +142,17 @@ function buildReportUrl(reportName, passPosProfile = true) {
 }
 
 const reports = computed(() => {
-  const storeReports = settingsStore.reports
-  if (storeReports && storeReports.length > 0) {
+  const fetchedReports = reportsResource.data?.reports || []
+  if (fetchedReports && fetchedReports.length > 0) {
     // Map the POS Report child table rows to display format.
     // Each row has: report (Frappe report name) and label (optional display name).
-    return storeReports.map((row) => ({
+    return fetchedReports.map((row) => ({
       label: row.label || row.report,
       route: buildReportUrl(row.report, row.pass_pos_profile !== 0),
       icon: 'bar-chart-2',
     }))
   }
-  // Fallback to default reports when none are configured in POS Settings
-  return [
-    {
-      label: __('Sales Register'),
-      route: buildReportUrl('Sales Register', true),
-      icon: 'file-text'
-    },
-    {
-      label: __('Item-wise Sales Register'),
-      route: buildReportUrl('Item-wise Sales Register', true),
-      icon: 'package'
-    },
-    {
-      label: __('POS Register'),
-      route: buildReportUrl('POS Register', true),
-      icon: 'list'
-    }
-  ]
+  
+  return []
 })
 </script>

@@ -255,7 +255,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		url: "pos_next.pos_next.doctype.pos_settings.pos_settings.get_pos_settings",
 		onSuccess(data) {
 			if (data) {
-				Object.assign(settings.value, data)
+				console.log("get_pos_settings returned:", data); Object.assign(settings.value, data)
 				isLoaded.value = true
 			}
 			isLoading.value = false
