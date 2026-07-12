@@ -135,11 +135,12 @@ def create_default_settings(pos_profile):
 	doc.pos_profile = pos_profile
 	doc.enabled = 1
 
-	# Pre-populate with the 3 standard reports
+	# Pre-populate with the 4 standard reports
 	default_reports = [
-		{"report": "Sales Register", "label": "Sales Register", "pass_pos_profile": 1},
-		{"report": "Item-wise Sales Register", "label": "Item-wise Sales Register", "pass_pos_profile": 1},
-		{"report": "POS Register", "label": "POS Register", "pass_pos_profile": 1},
+		{"report": "Item Wise Sales Summary", "label": "Item Wise Sales Summary", "pass_pos_profile": 1},
+		{"report": "Sales by Sales Person", "label": "Sales by Sales Person", "pass_pos_profile": 1},
+		{"report": "Sales by Mode of Payment", "label": "Sales by Mode of Payment", "pass_pos_profile": 1},
+		{"report": "Sales Report", "label": "Sales Report", "pass_pos_profile": 1},
 	]
 	for r in default_reports:
 		doc.append("reports", r)

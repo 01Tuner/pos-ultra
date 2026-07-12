@@ -1619,6 +1619,7 @@ export const useItemSearchStore = defineStore("itemSearch", () => {
 		loadMoreItems,
 		searchItems,
 		loadItemGroups,
+		appendAllItems,
 		searchByBarcode,
 		getItem,
 		setSearchTerm,

@@ -20,10 +20,10 @@
 					<div class="tooltip">{{ __('Promotions') }}</div>
 				</button>
 
-				<!-- Products -->
-				<button @click="handleMenuClick('products')" :class="getMenuClass('products')" :title="__('Products')">
+				<!-- Items -->
+				<button @click="handleMenuClick('products')" :class="getMenuClass('products')" :title="__('Items')">
 					<FeatherIcon name="package" class="w-5 h-5" />
-					<div class="tooltip">{{ __('Products') }}</div>
+					<div class="tooltip">{{ __('Items') }}</div>
 				</button>
 
 				<!-- Customers -->
@@ -151,7 +151,7 @@
 									<div class="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
 										<FeatherIcon name="package" class="w-5 h-5" />
 									</div>
-									<span class="font-medium text-gray-700">{{ __('Stock Lookup') }}</span>
+									<span class="font-medium text-gray-700">{{ __('Item Management') }}</span>
 								</button>
 
 								<!-- Promotions -->

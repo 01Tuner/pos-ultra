@@ -359,6 +359,21 @@
 												:description="__('Print without confirmation')"
 											/>
 											<CheckboxField
+												v-model="settings.allow_user_to_edit_rate"
+												:label="__('Allow Edit Rate')"
+												:description="__('Allow cashier to manually change the item rate during checkout')"
+											/>
+											<CheckboxField
+												v-model="settings.enable_delivery_note"
+												:label="__('Enable Delivery Note')"
+												:description="__('Show the Delivery Notes section in the POS sidebar for managing delivery notes')"
+											/>
+											<CheckboxField
+												v-model="settings.allow_add_item"
+												:label="__('Manage Item')"
+												:description="__('Allow cashier to create, edit, disable and update prices of items from the POS')"
+											/>
+											<CheckboxField
 												v-model="settings.allow_promotion"
 												:label="__('Enable Promotion')"
 												:description="__('Show the Promotions icon in the POS sidebar')"
@@ -436,6 +451,7 @@ const settings = ref({
 	use_percentage_discount: 0,
 	allow_user_to_edit_additional_discount: 0,
 	allow_user_to_edit_item_discount: 1,
+	allow_user_to_edit_rate: 0,
 	disable_rounded_total: 1,
 	allow_credit_sale: 0,
 	allow_return: 0,
@@ -446,6 +462,8 @@ const settings = ref({
 	tax_inclusive: 0,
 	allow_promotion: 1,
 	show_edit_item_if_no_price: 0,
+	enable_delivery_note: 0,
+	allow_add_item: 0,
 })
 
 // Stock Sync Settings (localStorage persisted)

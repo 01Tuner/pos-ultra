@@ -132,6 +132,7 @@
 						]" style="contain: layout style paint">
 							<ItemsSelector ref="itemsSelectorRef" :pos-profile="shiftStore.profileName"
 								:cart-items="cartStore.invoiceItems" :currency="shiftStore.profileCurrency"
+								:price-list="shiftStore.profilePriceList"
 								@item-selected="handleItemSelected" />
 						</div>
 					</keep-alive>
@@ -336,9 +337,10 @@
 				@update-item="handleZeroPriceItemConfirmed"
 			/>
 
-			<!-- Stock Lookup Dialog (Products Menu) -->
-			<WarehouseAvailabilityDialog v-model="showStockLookup" mode="search" :pos-profile="shiftStore.profileName"
-				:company="shiftStore.profileCompany" />
+			<!-- Product Management -->
+			<ProductManagement v-model="showStockLookup" :pos-profile="shiftStore.profileName"
+				:price-list="shiftStore.profilePriceList"
+				:currency="shiftStore.profileCurrency" />
 
 			<!-- ERPNext Reports Dialog -->
 			<ReportsDialog v-model="showReportsDialog" />
@@ -641,7 +643,7 @@ import OfflineInvoicesDialog from "@/components/sale/OfflineInvoicesDialog.vue";
 import PaymentDialog from "@/components/sale/PaymentDialog.vue";
 import PromotionManagement from "@/components/sale/PromotionManagement.vue";
 import ReturnInvoiceDialog from "@/components/sale/ReturnInvoiceDialog.vue";
-import WarehouseAvailabilityDialog from "@/components/sale/WarehouseAvailabilityDialog.vue";
+import ProductManagement from "@/components/pos/ProductManagement.vue";
 import POSSettings from "@/components/settings/POSSettings.vue";
 import InvoiceManagement from "@/components/invoices/InvoiceManagement.vue";
 import SalesOrderManagement from "@/components/sales_orders/SalesOrderManagement.vue";

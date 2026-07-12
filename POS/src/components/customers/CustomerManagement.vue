@@ -21,6 +21,15 @@
 							</div>
 						</div>
 						<div class="flex items-center gap-2">
+							<!-- Create Customer Button -->
+							<Button @click="showCreateCustomer = true" variant="solid" theme="blue" size="sm">
+								<template #prefix>
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+									</svg>
+								</template>
+								{{ __('New Customer') }}
+							</Button>
 							<Button @click="loadCustomers" :loading="loading" variant="ghost" size="sm">
 								<template #prefix>
 									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -183,6 +192,12 @@
 			</div>
 		</div>
 	</Transition>
+
+	<!-- Create Customer Dialog -->
+	<CreateCustomerDialog
+		v-model="showCreateCustomer"
+		@customer-created="handleCustomerCreated"
+	/>
 </template>
 
 <script setup>
@@ -191,6 +206,7 @@ import { Button } from "frappe-ui";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/currency"; 
 import { useToast } from "@/composables/useToast";
 import { call } from "@/utils/apiWrapper";
+import CreateCustomerDialog from "@/components/sale/CreateCustomerDialog.vue";
 
 const props = defineProps({
 	modelValue: Boolean,
@@ -206,6 +222,7 @@ const show = ref(props.modelValue);
 const customers = ref([]);
 const loading = ref(false);
 const searchQuery = ref("");
+const showCreateCustomer = ref(false);
 let searchTimeout = null;
 
 // Watchers
@@ -255,6 +272,11 @@ async function loadCustomers() {
     } finally {
         loading.value = false;
     }
+}
+
+function handleCustomerCreated(customer) {
+	showCreateCustomer.value = false;
+	loadCustomers();
 }
 </script>
 

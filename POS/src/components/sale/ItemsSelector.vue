@@ -115,6 +115,23 @@
 							</svg>
 							<span class="hidden xs:inline">{{ __('Auto') }}</span>
 						</button>
+						<!-- Add Item Button - only shown when allowAddItem is enabled -->
+						<button
+							v-if="settingsStore.allowAddItem"
+							@click="showCreateItemDialog = true"
+							:class="[
+								'p-1 sm:p-1.5 rounded transition-[background-color] duration-75 flex items-center gap-0.5 text-[9px] sm:text-xs font-medium px-1 sm:px-2 touch-manipulation',
+								'bg-green-100 hover:bg-green-200 active:bg-green-300 text-green-700'
+							]"
+							:title="__('Add new item')"
+							:aria-label="__('Add new item')"
+							id="add-item-btn"
+						>
+							<svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+							</svg>
+							<span class="hidden xs:inline">{{ __('New') }}</span>
+						</button>
 					</div>
 				</div>
 				<div class="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5 flex-shrink-0">
@@ -710,11 +727,21 @@
 		:uom="warehouseDialogItem.uom"
 		:company="warehouseDialogItem.company"
 	/>
+
+	<!-- Create Item Dialog -->
+	<CreateItemDialog
+		v-model="showCreateItemDialog"
+		:pos-profile="posProfile"
+		:price-list="priceList"
+		:currency="currency"
+		@item-created="handleItemCreated"
+	/>
 </template>
 
 <script setup>
 import LazyImage from "@/components/common/LazyImage.vue"
 import WarehouseAvailabilityDialog from "@/components/sale/WarehouseAvailabilityDialog.vue"
+import CreateItemDialog from "@/components/sale/CreateItemDialog.vue"
 import { useItemSearchStore } from "@/stores/itemSearch"
 import { usePOSSettingsStore } from "@/stores/posSettings"
 import { useStock } from "@/composables/useStock"
@@ -738,6 +765,10 @@ const props = defineProps({
 	currency: {
 		type: String,
 		default: "USD",
+	},
+	priceList: {
+		type: String,
+		default: "",
 	},
 })
 
@@ -779,9 +810,17 @@ const lastAutoSwitchCount = ref(0)
 const lastFilterSignature = ref("")
 const showSortDropdown = ref(false) // Sort dropdown visibility
 
+// Create Item dialog state
+const showCreateItemDialog = ref(false)
+
 // Warehouse availability dialog state
 const showWarehouseDialog = ref(false)
 const warehouseDialogItem = ref(null)
+
+// Handle newly created item injection
+function handleItemCreated(newItem) {
+	itemStore.appendAllItems([newItem])
+}
 
 // Infinite scroll refs
 const gridScrollContainer = ref(null)

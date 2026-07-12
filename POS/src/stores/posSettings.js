@@ -42,6 +42,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		allow_free_batch_return: 0,
 		allow_print_draft_invoices: 0,
 		enable_stock_transfer: 0,
+		allow_add_item: 0,
 		// Pricing & Display
 		decimal_precision: "2",
 		// Customer Settings
@@ -170,6 +171,9 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 	)
 	const enableStockTransfer = computed(() =>
 		Boolean(settings.value.enable_stock_transfer),
+	)
+	const allowAddItem = computed(() =>
+		Boolean(settings.value.allow_add_item),
 	)
 
 	// Computed - Pricing & Display
@@ -333,6 +337,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 			allow_free_batch_return: 0,
 			allow_print_draft_invoices: 0,
 		enable_stock_transfer: 0,
+			allow_add_item: 0,
 			decimal_precision: "2",
 			allow_customer_purchase_order: 0,
 			allow_duplicate_customer_names: 0,
@@ -451,6 +456,7 @@ export const usePOSSettingsStore = defineStore("posSettings", () => {
 		allowFreeBatchReturn,
 		allowPrintDraftInvoices,
 		enableStockTransfer,
+		allowAddItem,
 
 		// Computed - Pricing & Display
 		decimalPrecision,

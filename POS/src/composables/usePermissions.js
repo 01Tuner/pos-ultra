@@ -109,6 +109,7 @@ export function usePermissions() {
 		const commonChecks = [
 			{ doctype: "Customer", permType: "create" },
 			{ doctype: "Customer", permType: "write" },
+			{ doctype: "Item", permType: "create" },
 			{ doctype: "Promotional Scheme", permType: "create" },
 			{ doctype: "Promotional Scheme", permType: "write" },
 			{ doctype: "Promotional Scheme", permType: "delete" },
@@ -141,6 +142,10 @@ export function usePOSPermissions() {
 		await checkPermission("Customer", "create")
 	const canEditCustomer = async () => await checkPermission("Customer", "write")
 
+	// Item permissions
+	const canCreateItem = async () =>
+		await checkPermission("Item", "create")
+
 	// Promotion permissions
 	const canCreatePromotion = async () =>
 		await checkPermission("Promotional Scheme", "create")
@@ -168,6 +173,7 @@ export function usePOSPermissions() {
 	return {
 		canCreateCustomer,
 		canEditCustomer,
+		canCreateItem,
 		canCreatePromotion,
 		canEditPromotion,
 		canDeletePromotion,
