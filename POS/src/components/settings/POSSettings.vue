@@ -417,11 +417,14 @@ import {
 	getSectionHeaderClasses,
 	getSubsectionClasses,
 	icons,
-} from "./settingsConfig"
+		} from "./settingsConfig"
 import { offlineWorker } from "@/utils/offline/workerClient"
 import { logger } from "@/utils/logger"
 import { usePOSEvents } from "@/composables/usePOSEvents"
+import { usePOSSettingsStore } from "@/stores/posSettings"
 import TranslatedHTML from "../common/TranslatedHTML.vue"
+
+const settingsStore = usePOSSettingsStore()
 
 const log = logger.create('POSSettings')
 const { detectSettingsChanges, updateSettingsSnapshot, emitStockSyncConfigured } = usePOSEvents()
@@ -653,6 +656,8 @@ async function saveSettings() {
 		if (result) {
 			Object.assign(settings.value, result)
 			settings.value.pos_profile = props.posProfile
+			// Sync the global POS Settings store
+			Object.assign(settingsStore.settings, result)
 			// Update original values after successful save
 			originalAllowNegativeStock.value = result.allow_negative_stock
 			originalTaxInclusive.value = result.tax_inclusive

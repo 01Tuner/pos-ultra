@@ -265,7 +265,7 @@
 													</button>
 												</div>
 												<button
-													v-else-if="settingsStore.allowAddItem"
+													v-else-if="settingsStore.allowEditRate"
 													@click="startPriceEdit(product)"
 													class="group inline-flex items-center gap-1.5 px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors text-sm font-semibold text-gray-800"
 													:title="__('Click to edit price')"
@@ -275,6 +275,9 @@
 														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
 													</svg>
 												</button>
+												<span v-else class="text-sm font-semibold text-gray-800">
+													{{ formatCurrency(product.price) }}
+												</span>
 											</td>
 											<!-- Status badge -->
 											<td class="px-4 py-3 text-center">
@@ -286,7 +289,7 @@
 												</span>
 											</td>
 											<!-- Actions -->
-											<td class="px-4 py-3 text-right">
+											<td v-if="settingsStore.allowAddItem" class="px-4 py-3 text-right">
 												<div class="flex items-center justify-end gap-1.5">
 													<button
 														@click="openEditProduct(product)"
@@ -351,7 +354,7 @@
 				<!-- Price -->
 				<div>
 					<label class="block text-sm font-medium text-gray-700 mb-1.5">{{ __('Price') }}</label>
-					<Input v-model="editingProduct.price" type="number" :placeholder="__('0.00')" min="0" step="0.01" />
+					<Input disabled="!settingsStore.allowEditRate" v-model="editingProduct.price" type="number" :placeholder="__('0.00')" min="0" step="0.01" />
 				</div>
 				<!-- Description -->
 				<div>
